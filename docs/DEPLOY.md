@@ -132,3 +132,49 @@ The front-end then calls `https://USERNAME.pythonanywhere.com/api/...`.
 - **Admin or Swagger page has no styling:** run `python manage.py collectstatic --noinput` and check the `/static/` mapping in step 5.
 - **Front-end gets a CORS error:** its exact address is missing from `DJANGO_CORS_ORIGINS`.
 - **Site disabled after a month:** free web apps must be renewed. Click **Run until 1 month from today** on the Web tab.
+
+## Backups and restore (NFR-08, NFR-09)
+
+The database is one file (`db.sqlite3`), so a backup is a safe copy of it. Run from `backend` with the venv active:
+
+```bash
+python manage.py backup_db
+```
+
+It saves `backups/db-YYYY-MM-DD-HHMMSS.sqlite3` and deletes the oldest ones, so only the last 14 stay. The `backups` folder ignores itself in Git, so real data is never pushed.
+
+### Every day, automatically
+
+On the PythonAnywhere **Tasks** tab, add a daily task (for example at 02:00) with this command, replacing `USERNAME`:
+
+```bash
+cd /home/USERNAME/Tadreeb_full/backend && venv/bin/python manage.py backup_db
+```
+
+The backups live on the same server as the database. Every now and then, download the newest one from the **Files** tab and keep it somewhere else.
+
+### Restoring
+
+1. Pick the backup file in `backups/`.
+2. Run:
+
+```bash
+python manage.py restore_db backups/db-YYYY-MM-DD-HHMMSS.sqlite3 --yes
+```
+
+The data that was there is saved first as `backups/before-restore-....sqlite3`. Without `--yes` the command refuses, so a typo can't erase data.
+
+3. Click **Reload** on the Web tab.
+
+Both commands work with SQLite only. If the project moves to PostgreSQL, use `pg_dump` and `pg_restore` instead.
+
+### Restore test before the final demo (NFR-09)
+
+Do this once, on a copy of the project, not on the live data:
+
+1. `python manage.py backup_db`
+2. Change something (for example add a student in `/admin/`).
+3. `python manage.py restore_db <the backup file> --yes`
+4. Check that the change is gone and the old data is back.
+
+Date of the last restore test: ____
