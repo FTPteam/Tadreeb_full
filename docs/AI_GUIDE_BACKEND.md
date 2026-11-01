@@ -2,7 +2,7 @@
 
 > **How to use this file:** copy everything below the line into a new chat with any AI assistant (ChatGPT, Gemini, Claude…), then ask for one task at a time. When you ask about an existing file, paste that file's current content too, because the AI can't see the repository.
 >
-> Last updated: 2026-10-26 (after PR #23).
+> Last updated: 2026-11-01 (after PR #36 and pdf-export).
 
 ---
 
@@ -50,9 +50,10 @@ python manage.py test             # run all tests
 | `notifications` | `Notification` + `notify()` (FR-38) | Wafaa |
 | `imports` | Excel student import (FR-03), `seed_demo` command | **Maryam** |
 | `audit` | `AuditLog`, `AuditMixin`, `log_action()` (FR-40) | **Maryam** |
-| `training` | `DailyLog` (FR-20); next: attendance, plan, reports, visits | **Maryam** |
+| `training` | `DailyLog` (FR-20), training plan (FR-19), attendance (FR-21, 22), reports (FR-23), visits (FR-24) | **Maryam** |
 | `evaluations` | evaluations, final grade, provider ratings (FR-25–29) | Wafaa (built by Maryam) |
-| `certificates` (not created yet) | certificate PDF, QR, verification (FR-34, 35) | **Maryam** |
+| `certificates` | certificate PDF, QR, verification, guidance letter (FR-17, 34, 35) | **Maryam** |
+| `analytics` | statistics dashboard (FR-36), Excel & PDF export (FR-37), archive (FR-39) | **Maryam** |
 
 ## Conventions (follow these exactly)
 

@@ -75,6 +75,7 @@ Opportunity responses include `free_seats`.
 | GET / POST | `/api/provider-ratings/` | the student rates 1-5 once after the training; provider, supervisor, coordinator read | FR-29 |
 | GET | `/api/stats/` | coordinator, admin | dashboard numbers (FR-36) |
 | GET | `/api/exports/applications/` | coordinator, admin | Excel file (FR-37) |
+| GET | `/api/exports/applications/pdf/` | coordinator, admin | PDF table in Arabic (FR-37, NFR-07) |
 | GET | `/api/archive/` | coordinator, admin | certified, rejected and withdrawn files (FR-39) |
 
 Stats, export and archive take the same filters: `year`, `department`, `provider`, `status`, `search`. The coordinator can approve only when the final grade is complete and passing; the certificate is then issued automatically and the application becomes `certified`. The weights and pass mark are `TADREEB_GRADE_WEIGHTS` and `TADREEB_PASS_GRADE` in `config/settings.py` (D-05). Set `TADREEB_INSTITUTION_NAME` and `TADREEB_CERTIFICATE_VERIFY_URL` (e.g. `https://front.example/verify/{code}`) in `.env` when needed.
