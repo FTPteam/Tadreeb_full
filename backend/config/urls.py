@@ -13,6 +13,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework import serializers
 
 from analytics.views import ApplicationsExportView, ArchiveViewSet, StatsView
+from analytics.pdf_export import ApplicationsPdfExportView
 from accounts.views import DepartmentViewSet, StudentViewSet, me, my_student_profile
 from applications.views import ApplicationDocumentViewSet, ApplicationViewSet, ExceptionRequestViewSet
 from audit.views import AuditLogViewSet
@@ -84,6 +85,7 @@ urlpatterns = [
     path("api/placements/<int:pk>/letter/", placement_letter),
     path("api/stats/", StatsView.as_view()),
     path("api/exports/applications/", ApplicationsExportView.as_view()),
+    path("api/exports/applications/pdf/", ApplicationsPdfExportView.as_view()),
     path("api/", include(router.urls)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
