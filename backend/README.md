@@ -1,4 +1,4 @@
-# الخادم (Back-End) — وفاء
+# الخادم (Back-End) — وفاء ومريم
 
 To run Django + Django REST Framework, copy these commands into your terminal (Linux/macOS):
 
@@ -13,20 +13,22 @@ python manage.py runserver
 
 On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` instead.
 
-### Login API
+### Login & Auth API
 
 | Method | URL | Body | Returns |
 |---|---|---|---|
-| POST | `/api/auth/login/` | `{"username", "password"}` | `{"access", "refresh"}` |
+| POST | `/api/auth/login/` | `{"username", "password"}` | `{"access", "refresh"}` (FR-01, NFR-05) |
 | POST | `/api/auth/refresh/` | `{"refresh"}` | `{"access"}` |
 | GET | `/api/auth/me/` | header `Authorization: Bearer <access>` | `{"id", "username", "full_name", "role"}` |
+| POST | `/api/auth/password-reset/` | `{"email"}` | `{"detail"}` (FR-02) |
+| POST | `/api/auth/password-reset/confirm/` | `{"uid", "token", "new_password"}` | `{"detail"}` (FR-02) |
 | GET | `/api/health/` | public | `{"status": "ok"}` |
 | GET / PATCH | `/api/students/me/` | student only; PATCH `phone`, `email`, `cv` | profile + `eligibility` |
 | GET | `/api/students/?search=&department=&specialization=&academic_status=` | supervisor, coordinator, admin | 20 per page |
 | GET / PATCH | `/api/students/<id>/` | supervisor, coordinator, admin | profile + `eligibility` |
 | GET | `/api/departments/` | any logged-in user | departments with `specializations` |
 
-The access token lasts 1 day. Every endpoint except health needs the header. Login accepts the university ID or the email in `username`.
+The access token lasts 30 minutes, and sessions terminate after 30 minutes of inactivity (NFR-05). Five consecutive failed login attempts lock out the account for 15 minutes (NFR-05). Login accepts the university ID or the email in `username`. Password reset emails are sent via console locally, and via SMTP in production (FR-02).
 
 Student profile shape:
 

@@ -73,7 +73,7 @@ accounts.User (student) ── Application ──┬── Preference ×3 ──
 
 ### جاهز ✅
 
-- `accounts`: المستخدمين والأدوار، الأقسام والتخصصات، ملف الطالب، الأهلية (FR-01, 04–06)
+- `accounts`: المستخدمين والأدوار، الأقسام والتخصصات، ملف الطالب، الأهلية (FR-01, 04–06)، استعادة كلمة المرور بالبريد (FR-02)، وقفل المحاولات الفاشلة وجلسات الخمول (NFR-05)
 - `notifications`: الإشعارات و `notify()` (FR-38)، أي جزء بيستدعيها لما يصير إشي
 - Swagger على `/api/docs/` (NFR-16)
 
@@ -97,7 +97,7 @@ accounts.User (student) ── Application ──┬── Preference ×3 ──
 - التقييمات (FR-25–29) صارت بـ app اسمه `evaluations`: الجهة والمشرف كل واحد بيقيّم مرة وبيقدر يعدّل لحد الاعتماد، والطالب بيقيّم الجهة بعد ما يخلص. لما تكتمل الدرجات لتدريب `completed` المنسق بيوصله إشعار «تدريب جاهز للاعتماد». الدرجة النهائية كمان بتطلع بملف Excel.
 - الاستثناءات (FR-30–33، شغل وفاء) على `/api/exception-requests/`: تغيير الجهة، الانسحاب، التمديد، المشاكل (PR #28).
 - إكمال التدريب التلقائي (BR-06): **كل قسم إله عدد ساعات خاص فيه** (`Department.required_training_hours`، بينضبط من لوحة الإدارة). لما الجهة تأكد يوم ويوصل مجموع الساعات المؤكدة لساعات قسم الطالب، النظام بينقل الطلب لـ `completed` وببعت إشعار للطالب والمشرف. القسم اللي ما إله رقم بياخد `TADREEB_REQUIRED_TRAINING_HOURS` (240). الطالب بيشوف تقدّمه على `GET /api/daily-logs/progress/?application=<id>`.
-- تحقق بتاريخ 01-11-2026: `manage.py check`، `makemigrations --check --dry-run`، `spectacular --validate`، و280 اختبار ناجح.
+- تحقق بتاريخ 01-11-2026: `manage.py check`، `makemigrations --check --dry-run`، `spectacular --validate`، و286 اختبار ناجح.
 
 ## قرارات لسا مفتوحة (Appendix A)
 

@@ -1,7 +1,12 @@
 from decimal import Decimal
 
+from django.contrib.auth.tokens import default_token_generator
+from django.core import mail
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from rest_framework.test import APITestCase
 
 from .eligibility import check_eligibility
@@ -10,6 +15,7 @@ from .models import Department, Specialization, StudentProfile, User
 
 class AuthTests(APITestCase):
     def setUp(self):
+        cache.clear()
         User.objects.create_user(
             username="20251234",
             password="Test12345!",
@@ -17,6 +23,10 @@ class AuthTests(APITestCase):
             last_name="أحمد",
             role=User.Role.STUDENT,
         )
+
+    def tearDown(self):
+        cache.clear()
+        super().tearDown()
 
     def login(self):
         response = self.client.post(
@@ -35,6 +45,35 @@ class AuthTests(APITestCase):
             "/api/auth/login/", {"username": "20251234", "password": "wrong"}
         )
         self.assertEqual(response.status_code, 401)
+
+    def test_login_lockout_after_5_failed_attempts(self):
+        # NFR-05: 5 failed attempts lock out for 15 minutes
+        for _ in range(4):
+            res = self.client.post("/api/auth/login/", {"username": "20251234", "password": "wrong"})
+            self.assertEqual(res.status_code, 401)
+            self.assertNotIn("15 دقيقة", str(res.data))
+
+        # 5th attempt triggers lockout
+        res5 = self.client.post("/api/auth/login/", {"username": "20251234", "password": "wrong"})
+        self.assertEqual(res5.status_code, 401)
+        self.assertIn("15 دقيقة", str(res5.data))
+
+        # 6th attempt even with correct password is locked out
+        res6 = self.client.post("/api/auth/login/", {"username": "20251234", "password": "Test12345!"})
+        self.assertEqual(res6.status_code, 401)
+        self.assertIn("15 دقيقة", str(res6.data))
+
+    def test_successful_login_resets_failed_attempts(self):
+        for _ in range(3):
+            self.client.post("/api/auth/login/", {"username": "20251234", "password": "wrong"})
+        success = self.client.post("/api/auth/login/", {"username": "20251234", "password": "Test12345!"})
+        self.assertEqual(success.status_code, 200)
+
+        # 4 more failures shouldn't lock out because it was reset
+        for _ in range(4):
+            res = self.client.post("/api/auth/login/", {"username": "20251234", "password": "wrong"})
+            self.assertEqual(res.status_code, 401)
+            self.assertNotIn("15 دقيقة", str(res.data))
 
     def test_me_returns_the_logged_in_user(self):
         access = self.login()["access"]
@@ -67,6 +106,89 @@ class AuthTests(APITestCase):
         self.assertEqual(
             response["Access-Control-Allow-Origin"], "http://localhost:5173"
         )
+
+
+class PasswordResetTests(APITestCase):
+    """FR-02: forgot password reset by email link."""
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            username="20259999",
+            email="reset_test@example.com",
+            password="OldPassword123!",
+            first_name="أحمد",
+            role=User.Role.STUDENT,
+        )
+
+    def tearDown(self):
+        cache.clear()
+        super().tearDown()
+
+    def test_password_reset_request_sends_email(self):
+        response = self.client.post(
+            "/api/auth/password-reset/",
+            {"email": "reset_test@example.com"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn("استعادة كلمة المرور", email.subject)
+        self.assertIn("reset_test@example.com", email.to)
+        self.assertIn("uid=", email.body)
+        self.assertIn("token=", email.body)
+
+    def test_password_reset_unknown_email_still_returns_200(self):
+        response = self.client.post(
+            "/api/auth/password-reset/",
+            {"email": "unknown@example.com"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_password_reset_confirm_changes_password(self):
+        token = default_token_generator.make_token(self.user)
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+
+        response = self.client.post(
+            "/api/auth/password-reset/confirm/",
+            {
+                "uid": uid,
+                "token": token,
+                "new_password": "NewSecretPassword123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # Login with old password fails
+        fail = self.client.post(
+            "/api/auth/login/", {"username": "20259999", "password": "OldPassword123!"}
+        )
+        self.assertEqual(fail.status_code, 401)
+
+        # Login with new password succeeds
+        success = self.client.post(
+            "/api/auth/login/", {"username": "20259999", "password": "NewSecretPassword123!"}
+        )
+        self.assertEqual(success.status_code, 200)
+        self.assertIn("access", success.data)
+
+    def test_password_reset_confirm_invalid_token_fails(self):
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        response = self.client.post(
+            "/api/auth/password-reset/confirm/",
+            {
+                "uid": uid,
+                "token": "invalid-token",
+                "new_password": "NewSecretPassword123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.data)
 
 
 class StudentProfileTests(APITestCase):

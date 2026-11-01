@@ -23,7 +23,10 @@
    - `student` → `/student/dashboard`
    - `coordinator` و `admin` → `/admin/dashboard`
    - `supervisor` و `provider` → **ما في صفحات إلهم لسا** (شوف القسم 5)
-4. الـ `access` بيضل شغال يوم كامل. لما يرجع `401`، ابعتوا `POST /api/auth/refresh/` مع `{"refresh": "..."}` وخدوا `access` جديد، وإذا فشل رجّعوا المستخدم لصفحة الدخول.
+4. الـ `access` بيضل شغال 30 دقيقة للأمان وجلسات الخمول (NFR-05). لما يرجع `401`، ابعتوا `POST /api/auth/refresh/` مع `{"refresh": "..."}` وخدوا `access` جديد، وإذا فشل رجّعوا المستخدم لصفحة الدخول. بعد 5 محاولات فاشلة متتالية يُقفل الحساب مؤقتًا لمدة 15 دقيقة (NFR-05).
+5. **استعادة كلمة المرور (FR-02):**
+   - طلب الرابط: `POST /api/auth/password-reset/` مع `{"email": "student@example.com"}`.
+   - تعيين كلمة المرور الجديدة: `POST /api/auth/password-reset/confirm/` مع `{"uid": "...", "token": "...", "new_password": "..."}`.
 
 ### قواعد عامة
 - **أسماء الحقول بالـ API بـ `snake_case`** (`start_date` مش `startDate`). الجداول تحت بتبيّن التحويل.

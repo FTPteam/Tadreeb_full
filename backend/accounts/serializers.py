@@ -1,8 +1,10 @@
 from django.conf import settings
 from drf_spectacular.utils import extend_schema_field, inline_serializer
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .eligibility import check_eligibility
+from .lockout import clear_login_lockout, is_locked_out, normalize_login_identifier, record_failed_login
 from .models import Department, Specialization, StudentProfile, User
 
 
@@ -115,3 +117,46 @@ class StudentSelfUpdateSerializer(StudentProfileSerializer):
             profile.user.email = user_data["email"]
             profile.user.save(update_fields=["email"])
         return super().update(profile, validated_data)
+
+
+class LoginSerializer(TokenObtainPairSerializer):
+    """FR-01 / NFR-05: login with username or email, locking out for 15 min after 5 failed attempts."""
+
+    def validate(self, attrs):
+        username = attrs.get(self.username_field)
+        identifier = normalize_login_identifier(username)
+
+        if is_locked_out(identifier):
+            raise exceptions.AuthenticationFailed(
+                "تم إيقاف تسجيل الدخول مؤقتًا لمدة 15 دقيقة بعد 5 محاولات فاشلة (NFR-05)."
+            )
+
+        try:
+            data = super().validate(attrs)
+        except Exception:
+            if record_failed_login(identifier):
+                raise exceptions.AuthenticationFailed(
+                    "تم إيقاف تسجيل الدخول مؤقتًا لمدة 15 دقيقة بعد 5 محاولات فاشلة (NFR-05)."
+                )
+            raise
+
+        clear_login_lockout(identifier)
+        return data
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """FR-02: request a password reset email."""
+
+    email = serializers.EmailField(label="البريد الإلكتروني")
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """FR-02: set a new password using the email token."""
+
+    uid = serializers.CharField(label="معرّف المستخدم")
+    token = serializers.CharField(label="رمز التحقق")
+    new_password = serializers.CharField(label="كلمة المرور الجديدة", min_length=8, write_only=True)
+
+
+class MessageResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
