@@ -128,7 +128,7 @@ class LoginSerializer(TokenObtainPairSerializer):
 
         if is_locked_out(identifier):
             raise exceptions.AuthenticationFailed(
-                "تم إيقاف تسجيل الدخول مؤقتًا لمدة 15 دقيقة بعد 5 محاولات فاشلة (NFR-05)."
+                "تم إيقاف تسجيل الدخول مؤقتًا لمدة 15 دقيقة بعد 5 محاولات فاشلة."
             )
 
         try:
@@ -136,7 +136,7 @@ class LoginSerializer(TokenObtainPairSerializer):
         except Exception:
             if record_failed_login(identifier):
                 raise exceptions.AuthenticationFailed(
-                    "تم إيقاف تسجيل الدخول مؤقتًا لمدة 15 دقيقة بعد 5 محاولات فاشلة (NFR-05)."
+                    "تم إيقاف تسجيل الدخول مؤقتًا لمدة 15 دقيقة بعد 5 محاولات فاشلة."
                 )
             raise
 

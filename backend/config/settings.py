@@ -221,7 +221,8 @@ SESSION_SAVE_EVERY_REQUEST = True
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),  # NFR-05
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "REFRESH_TOKEN_LIFETIME": timedelta(minutes=30),  # NFR-05
+    "ROTATE_REFRESH_TOKENS": True,  # NFR-05
 }
 
 # NFR-05: lockout after 5 failed login attempts for 15 minutes.

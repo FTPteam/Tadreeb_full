@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth import password_validation
 from django.contrib.auth.tokens import default_token_generator
@@ -28,6 +30,8 @@ from .serializers import (
     StudentProfileSerializer,
     StudentSelfUpdateSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class LoginView(TokenObtainPairView):
@@ -76,13 +80,16 @@ class PasswordResetRequestView(APIView):
                 f"{reset_url}\n\n"
                 f"إذا لم تطلب استعادة كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان.\n"
             )
-            send_mail(
-                subject=subject,
-                message=body,
-                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
+            try:
+                send_mail(
+                    subject=subject,
+                    message=body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+            except Exception:
+                logger.exception("فشل إرسال بريد استعادة كلمة المرور للمستخدم %s", user.username)
 
         return Response(
             {"detail": "إذا كان البريد الإلكتروني مسجلًا لدينا، فستتلقى رابطًا لاستعادة كلمة المرور."}

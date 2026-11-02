@@ -1,4 +1,6 @@
+from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
@@ -107,6 +109,13 @@ class AuthTests(APITestCase):
             response["Access-Control-Allow-Origin"], "http://localhost:5173"
         )
 
+    def test_jwt_session_expiry_settings(self):
+        from django.conf import settings
+
+        jwt_settings = settings.SIMPLE_JWT
+        self.assertEqual(jwt_settings.get("REFRESH_TOKEN_LIFETIME"), timedelta(minutes=30))
+        self.assertIs(jwt_settings.get("ROTATE_REFRESH_TOKENS"), True)
+
 
 class PasswordResetTests(APITestCase):
     """FR-02: forgot password reset by email link."""
@@ -147,6 +156,19 @@ class PasswordResetTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
+
+    @patch("accounts.views.send_mail", side_effect=Exception("SMTP connection failed"))
+    def test_password_reset_request_handles_mail_failure_gracefully(self, mock_send_mail):
+        response = self.client.post(
+            "/api/auth/password-reset/",
+            {"email": "reset_test@example.com"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["detail"],
+            "إذا كان البريد الإلكتروني مسجلًا لدينا، فستتلقى رابطًا لاستعادة كلمة المرور.",
+        )
 
     def test_password_reset_confirm_changes_password(self):
         token = default_token_generator.make_token(self.user)
