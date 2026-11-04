@@ -1,4 +1,4 @@
-# الخادم (Back-End) — وفاء
+# الخادم (Back-End) — وفاء ومريم
 
 To run Django + Django REST Framework, copy these commands into your terminal (Linux/macOS):
 
@@ -13,20 +13,22 @@ python manage.py runserver
 
 On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` instead.
 
-### Login API
+### Login & Auth API
 
 | Method | URL | Body | Returns |
 |---|---|---|---|
-| POST | `/api/auth/login/` | `{"username", "password"}` | `{"access", "refresh"}` |
+| POST | `/api/auth/login/` | `{"username", "password"}` | `{"access", "refresh"}` (FR-01, NFR-05) |
 | POST | `/api/auth/refresh/` | `{"refresh"}` | `{"access"}` |
 | GET | `/api/auth/me/` | header `Authorization: Bearer <access>` | `{"id", "username", "full_name", "role"}` |
+| POST | `/api/auth/password-reset/` | `{"email"}` | `{"detail"}` (FR-02) |
+| POST | `/api/auth/password-reset/confirm/` | `{"uid", "token", "new_password"}` | `{"detail"}` (FR-02) |
 | GET | `/api/health/` | public | `{"status": "ok"}` |
 | GET / PATCH | `/api/students/me/` | student only; PATCH `phone`, `email`, `cv` | profile + `eligibility` |
 | GET | `/api/students/?search=&department=&specialization=&academic_status=` | supervisor, coordinator, admin | 20 per page |
 | GET / PATCH | `/api/students/<id>/` | supervisor, coordinator, admin | profile + `eligibility` |
 | GET | `/api/departments/` | any logged-in user | departments with `specializations` |
 
-The access token lasts 1 day. Every endpoint except health needs the header. Login accepts the university ID or the email in `username`.
+The access token lasts 30 minutes, and sessions terminate after 30 minutes of inactivity (NFR-05). Five consecutive failed login attempts lock out the account for 15 minutes (NFR-05). Login accepts the university ID or the email in `username`. Password reset emails are sent via console locally, and via SMTP in production (FR-02).
 
 Student profile shape:
 
@@ -75,6 +77,7 @@ Opportunity responses include `free_seats`.
 | GET / POST | `/api/provider-ratings/` | the student rates 1-5 once after the training; provider, supervisor, coordinator read | FR-29 |
 | GET | `/api/stats/` | coordinator, admin | dashboard numbers (FR-36) |
 | GET | `/api/exports/applications/` | coordinator, admin | Excel file (FR-37) |
+| GET | `/api/exports/applications/pdf/` | coordinator, admin | PDF table in Arabic (FR-37, NFR-07) |
 | GET | `/api/archive/` | coordinator, admin | certified, rejected and withdrawn files (FR-39) |
 
 Stats, export and archive take the same filters: `year`, `department`, `provider`, `status`, `search`. The coordinator can approve only when the final grade is complete and passing; the certificate is then issued automatically and the application becomes `certified`. The weights and pass mark are `TADREEB_GRADE_WEIGHTS` and `TADREEB_PASS_GRADE` in `config/settings.py` (D-05). Set `TADREEB_INSTITUTION_NAME` and `TADREEB_CERTIFICATE_VERIFY_URL` (e.g. `https://front.example/verify/{code}`) in `.env` when needed.

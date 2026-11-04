@@ -7,14 +7,22 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 from drf_spectacular.utils import extend_schema, inline_serializer
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework import serializers
 
 from analytics.views import ApplicationsExportView, ArchiveViewSet, StatsView
 from analytics.pdf_export import ApplicationsPdfExportView
-from accounts.views import DepartmentViewSet, StudentViewSet, me, my_student_profile
+from accounts.views import (
+    DepartmentViewSet,
+    LoginView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
+    StudentViewSet,
+    me,
+    my_student_profile,
+)
 from applications.views import ApplicationDocumentViewSet, ApplicationViewSet, ExceptionRequestViewSet
 from audit.views import AuditLogViewSet
 from evaluations.views import EvaluationViewSet, ProviderRatingViewSet
@@ -74,9 +82,11 @@ urlpatterns = [
         SpectacularSwaggerView.as_view(url_name="schema", permission_classes=[AllowAny]),
         name="swagger-ui",
     ),
-    path("api/auth/login/", TokenObtainPairView.as_view()),
-    path("api/auth/refresh/", TokenRefreshView.as_view()),
-    path("api/auth/me/", me),
+    path("api/auth/login/", LoginView.as_view(), name="login"),
+    path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/auth/me/", me, name="auth_me"),
+    path("api/auth/password-reset/", PasswordResetRequestView.as_view(), name="password_reset_request"),
+    path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
     # Before the router, so "me" isn't read as a student id.
     path("api/students/me/", my_student_profile),
     path("api/imports/", include("imports.urls")),

@@ -215,9 +215,23 @@ SPECTACULAR_SETTINGS = {
     },
 }
 
+# NFR-05: idle sessions terminate after 30 minutes.
+SESSION_COOKIE_AGE = 1800
+SESSION_SAVE_EVERY_REQUEST = True
+
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),  # NFR-05
+    "REFRESH_TOKEN_LIFETIME": timedelta(minutes=30),  # NFR-05
+    "ROTATE_REFRESH_TOKENS": True,  # NFR-05
 }
+
+# NFR-05: lockout after 5 failed login attempts for 15 minutes.
+TADREEB_LOGIN_MAX_FAILURES = 5
+TADREEB_LOGIN_LOCKOUT_SECONDS = 15 * 60
+
+# FR-02: default from-email and front-end password reset URL.
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@tadreeb.edu.ps")
+TADREEB_PASSWORD_RESET_URL = os.environ.get("TADREEB_PASSWORD_RESET_URL", "")
 
 # Hussein's Vite front-end runs on port 5173. On the server, add the deployed front-end's
 # address with DJANGO_CORS_ORIGINS (comma-separated, e.g. "https://tadreeb.netlify.app").
