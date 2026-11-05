@@ -4,16 +4,13 @@ from applications.models import Application
 
 from .models import Certificate
 
+# NFR-19: the minimum anyone holding the QR code may see. No university id or other details.
 PUBLIC_FIELDS = [
     "serial_number",
     "student_name",
-    "university_id",
-    "specialization",
     "provider_name",
-    "opportunity_title",
     "start_date",
     "end_date",
-    "total_hours",
     "issued_at",
     "is_valid",
     "revoked_at",
@@ -25,7 +22,17 @@ class CertificateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Certificate
-        fields = ["id", "application", "verification_code", *PUBLIC_FIELDS, "revoke_reason"]
+        fields = [
+            "id",
+            "application",
+            "verification_code",
+            *PUBLIC_FIELDS,
+            "university_id",
+            "specialization",
+            "opportunity_title",
+            "total_hours",
+            "revoke_reason",
+        ]
         read_only_fields = fields
 
 
