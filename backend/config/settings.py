@@ -134,9 +134,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ar'  # NFR-11: framework messages in Arabic too
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Gaza'  # so "today" is the local day (daily logs, deadlines)
 
 USE_I18N = True
 
