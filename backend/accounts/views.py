@@ -5,30 +5,38 @@ from django.contrib.auth import password_validation
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import send_mail
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, serializers, viewsets
-from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.decorators import action, api_view, parser_classes, permission_classes
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from applications.status import Status
+from audit.mixins import AuditMixin
+from audit.models import AuditLog, log_action
+
 from .lockout import clear_login_lockout
 from .models import Department, StudentProfile, User
-from .permissions import IsStaffRole, IsStudent
+from .permissions import IsCoordinator, IsStaffRole, IsStudent, IsSystemAdmin
 from .serializers import (
+    COORDINATOR_MANAGES,
     DepartmentSerializer,
     LoginSerializer,
     MeSerializer,
     MessageResponseSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
+    SetPasswordSerializer,
     StudentProfileSerializer,
     StudentSelfUpdateSerializer,
+    UserSerializer,
+    check_password,
 )
 
 logger = logging.getLogger(__name__)
@@ -190,6 +198,85 @@ class StudentViewSet(
             if params.get(field):
                 queryset = queryset.filter(**{field: params[field]})
         return queryset
+
+
+class UserViewSet(
+    AuditMixin,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """/api/users/: accounts (FR-03), and the supervisors to choose from (FR-18).
+
+    - coordinator: students, supervisors and providers
+    - admin: everyone; also changes roles and resets passwords
+    Accounts aren't deleted, because their history stays: set is_active to false.
+    Filters: ?role=supervisor  ?is_active=true  ?search=name, id or email
+    """
+
+    serializer_class = UserSerializer
+    permission_classes = [IsCoordinator]
+    http_method_names = ["get", "post", "patch", "head", "options"]
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return User.objects.none()
+
+        finished = [Status.REJECTED, Status.WITHDRAWN, Status.CERTIFIED]
+        users = (
+            User.objects.select_related("provider_profile")
+            .annotate(
+                students_count=Count(
+                    "supervised_applications",
+                    filter=~Q(supervised_applications__status__in=finished),
+                )
+            )
+            .order_by("username")
+        )
+        if self.request.user.role != User.Role.ADMIN:
+            users = users.filter(role__in=COORDINATOR_MANAGES)
+
+        params = self.request.query_params
+        if params.get("role"):
+            users = users.filter(role=params["role"])
+        if params.get("is_active"):
+            users = users.filter(is_active=params["is_active"].lower() in ("1", "true"))
+        if params.get("search"):
+            search = params["search"]
+            users = users.filter(
+                Q(username__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(email__icontains=search)
+            )
+        return users
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("role", str, description="e.g. supervisor"),
+            OpenApiParameter("is_active", bool),
+            OpenApiParameter("search", str),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(request=SetPasswordSerializer, responses={200: MessageResponseSerializer})
+    @action(detail=True, methods=["post"], url_path="set-password", permission_classes=[IsSystemAdmin])
+    def set_password(self, request, pk=None):
+        """POST /api/users/<id>/set-password/: {"password": "..."}. The admin resets a password (FR-02)."""
+        user = self.get_object()
+        serializer = SetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        password = serializer.validated_data["password"]
+        check_password(password, user)
+        user.set_password(password)
+        user.save(update_fields=["password"])
+        clear_login_lockout(user.username)
+        log_action(request, AuditLog.Action.UPDATE, user, {"reset_by_admin": {"from": None, "to": True}})
+        return Response({"detail": "تم تعيين كلمة المرور."})
 
 
 class DepartmentViewSet(viewsets.ReadOnlyModelViewSet):

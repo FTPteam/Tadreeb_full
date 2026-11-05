@@ -20,6 +20,7 @@ from accounts.views import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
     StudentViewSet,
+    UserViewSet,
     me,
     my_student_profile,
 )
@@ -53,6 +54,7 @@ def health(request):
 
 router = DefaultRouter()
 router.register("students", StudentViewSet, basename="student")
+router.register("users", UserViewSet, basename="user")
 router.register("departments", DepartmentViewSet, basename="department")
 router.register("providers", ProviderViewSet, basename="provider")
 router.register("opportunities", OpportunityViewSet, basename="opportunity")

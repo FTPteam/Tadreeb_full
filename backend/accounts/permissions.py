@@ -29,6 +29,10 @@ class IsCoordinator(HasRole):
     roles = (User.Role.COORDINATOR, User.Role.ADMIN)
 
 
+class IsSystemAdmin(HasRole):
+    roles = (User.Role.ADMIN,)
+
+
 class IsStaffRole(HasRole):
     """Supervisor, coordinator or admin: the people who manage students."""
 

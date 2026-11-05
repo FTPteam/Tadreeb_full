@@ -1,11 +1,140 @@
 from django.conf import settings
+from django.contrib.auth import password_validation
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from drf_spectacular.utils import extend_schema_field, inline_serializer
 from rest_framework import exceptions, serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from providers.models import Provider
+
 from .eligibility import check_eligibility
 from .lockout import clear_login_lockout, is_locked_out, normalize_login_identifier, record_failed_login
 from .models import Department, Specialization, StudentProfile, User
+
+# What a coordinator may create and edit (FR-03). Coordinators and admins are the admin's
+# alone (Section 2.2), so nobody can raise their own access.
+COORDINATOR_MANAGES = (User.Role.STUDENT, User.Role.SUPERVISOR, User.Role.PROVIDER)
+
+
+def check_password(password, user):
+    try:
+        password_validation.validate_password(password, user)
+    except DjangoValidationError as error:
+        raise serializers.ValidationError({"password": list(error.messages)})
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """FR-03: one account. Without a password, the user sets one through "forgot password"
+    (FR-02), which needs an email. `provider` links a provider account to its Provider."""
+
+    full_name = serializers.CharField(source="get_full_name", read_only=True)
+    role = serializers.ChoiceField(choices=User.Role.choices)
+    role_display = serializers.CharField(source="get_role_display", read_only=True)
+    password = serializers.CharField(write_only=True, required=False, style={"input_type": "password"})
+    provider = serializers.PrimaryKeyRelatedField(
+        source="provider_profile", queryset=Provider.objects.all(), required=False, allow_null=True
+    )
+    # Supervisors: how many students they follow now (Supervisors page).
+    students_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "full_name",
+            "email",
+            "role",
+            "role_display",
+            "is_active",
+            "provider",
+            "students_count",
+            "password",
+            "last_login",
+            "date_joined",
+        ]
+        read_only_fields = ["last_login", "date_joined"]
+
+    def validate_email(self, email):
+        others = User.objects.filter(email__iexact=email)
+        if self.instance:
+            others = others.exclude(pk=self.instance.pk)
+        if email and others.exists():
+            raise serializers.ValidationError("هذا البريد مستخدم لحساب آخر.")
+        return email
+
+    def validate(self, attrs):
+        actor = self.context["request"].user
+        role = attrs.get("role", self.instance.role if self.instance else None)
+
+        if actor.role != User.Role.ADMIN:
+            if role not in COORDINATOR_MANAGES:
+                raise serializers.ValidationError({"role": "إدارة هذا الدور لمدير النظام فقط."})
+            if self.instance and role != self.instance.role:
+                raise serializers.ValidationError({"role": "تغيير الدور لمدير النظام فقط."})
+        if self.instance == actor and (role != actor.role or attrs.get("is_active") is False):
+            raise serializers.ValidationError("لا يمكنك تغيير دور حسابك أو تعطيله.")
+
+        if self.instance:
+            if "password" in attrs:
+                raise serializers.ValidationError({"password": "تُغيَّر كلمة المرور من set-password."})
+        elif attrs.get("password"):
+            names = ("username", "email", "first_name", "last_name")
+            check_password(attrs["password"], User(**{k: v for k, v in attrs.items() if k in names}))
+        elif not attrs.get("email"):
+            raise serializers.ValidationError(
+                {"email": "البريد مطلوب إذا لم تحدد كلمة مرور، ليعيّنها المستخدم بنفسه."}
+            )
+
+        provider = attrs.get("provider_profile")
+        if provider:
+            if role != User.Role.PROVIDER:
+                raise serializers.ValidationError({"provider": "الربط بجهة تدريب لحساب جهة فقط."})
+            if provider.user_id and provider.user != self.instance:
+                raise serializers.ValidationError({"provider": "هذه الجهة مرتبطة بحساب آخر."})
+        return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        provider = validated_data.pop("provider_profile", None)
+        password = validated_data.pop("password", None)
+        user = User(**validated_data)
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
+        user.save()
+        if user.role == User.Role.STUDENT:
+            StudentProfile.objects.get_or_create(user=user)
+        if provider:
+            self.link_provider(user, provider)
+        return user
+
+    @transaction.atomic
+    def update(self, user, validated_data):
+        relink = "provider_profile" in validated_data
+        provider = validated_data.pop("provider_profile", None)
+        user = super().update(user, validated_data)
+        if user.role == User.Role.STUDENT:
+            StudentProfile.objects.get_or_create(user=user)
+        if relink or user.role != User.Role.PROVIDER:
+            self.link_provider(user, provider)
+        return user
+
+    def link_provider(self, user, provider):
+        """The account's provider is now `provider`; None removes the link."""
+        Provider.objects.filter(user=user).update(user=None)
+        user._state.fields_cache.pop("provider_profile", None)
+        if provider:
+            provider.user = user
+            provider.save(update_fields=["user"])
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(style={"input_type": "password"})
 
 
 class MeSerializer(serializers.ModelSerializer):
