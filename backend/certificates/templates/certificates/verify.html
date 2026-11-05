@@ -30,12 +30,8 @@
       <table>
         <tr><td>رقم الشهادة</td><td>{{ certificate.serial_number }}</td></tr>
         <tr><td>اسم الطالب</td><td>{{ certificate.student_name }}</td></tr>
-        <tr><td>الرقم الجامعي</td><td>{{ certificate.university_id }}</td></tr>
-        {% if certificate.specialization %}<tr><td>التخصص</td><td>{{ certificate.specialization }}</td></tr>{% endif %}
         <tr><td>جهة التدريب</td><td>{{ certificate.provider_name }}</td></tr>
-        <tr><td>فرصة التدريب</td><td>{{ certificate.opportunity_title }}</td></tr>
         <tr><td>الفترة</td><td>{{ certificate.start_date|date:"Y-m-d" }} إلى {{ certificate.end_date|date:"Y-m-d" }}</td></tr>
-        <tr><td>عدد الساعات</td><td>{{ certificate.total_hours.normalize }}</td></tr>
         <tr><td>تاريخ الإصدار</td><td>{{ certificate.issued_at|date:"Y-m-d" }}</td></tr>
       </table>
     {% endif %}
