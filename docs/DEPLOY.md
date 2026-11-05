@@ -1,4 +1,29 @@
-# Deploying the backend to PythonAnywhere
+# Deploying the backend
+
+- **Taqat Academy hosting** (`ftp-api.apps.taqat.academy`): see [the next section](#taqat-academy-hosting).
+- **PythonAnywhere**: see [Deploying to PythonAnywhere](#deploying-to-pythonanywhere).
+
+## Taqat Academy hosting
+
+The app is built by Nixpacks from the repo root. `requirements.txt` and `nixpacks.toml` at the root point it at `backend/`. Every start runs `migrate`, `collectstatic`, then `gunicorn`, so there's nothing to run by hand.
+
+Set these in the **Environment** tab, then press **Deploy**:
+
+| Name | Value |
+|---|---|
+| `DJANGO_SECRET_KEY` | a new random key (see step 3 below for the command) |
+| `DJANGO_DEBUG` | `False` |
+| `DJANGO_ALLOWED_HOSTS` | `ftp-api.apps.taqat.academy` |
+| `DATABASE_URL` | the PostgreSQL address from the **Database** tab |
+| `DJANGO_CORS_ORIGINS` | the front-end's address once it's deployed |
+
+Without `DATABASE_URL` the app uses SQLite inside the container, and **all data is lost on every deploy**.
+
+To make the admin account, open the **Terminal** tab and run `cd backend && python manage.py createsuperuser`.
+
+Uploaded files (CVs, reports) are saved inside the container too, so they're also lost on redeploy unless the host gives the app a persistent folder for `backend/media/`.
+
+# Deploying to PythonAnywhere
 
 Replace `USERNAME` everywhere below with your PythonAnywhere username. The site will be at `https://USERNAME.pythonanywhere.com`.
 

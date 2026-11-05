@@ -1,0 +1,10 @@
+# Build settings for the Taqat Academy hosting (builder: NIXPACKS).
+# The backend is in backend/, so every command cds into it first.
+# Steps on each start: apply migrations, collect admin/Swagger CSS, then run gunicorn.
+
+[variables]
+# Django 6 needs Python 3.12 or newer.
+NIXPACKS_PYTHON_VERSION = "3.12"
+
+[start]
+cmd = "cd backend && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120 --access-logfile -"

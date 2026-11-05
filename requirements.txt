@@ -1,0 +1,3 @@
+# The Django backend lives in backend/. This file is here so the Taqat hosting
+# (Nixpacks) finds the Python project at the repo root.
+-r backend/requirements.txt

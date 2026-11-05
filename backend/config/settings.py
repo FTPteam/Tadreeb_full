@@ -14,6 +14,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
@@ -73,6 +74,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    # Serves the admin and Swagger CSS/JS on the live server (no separate web server needed).
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -104,11 +107,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+# On the server, DATABASE_URL (e.g. postgres://user:pass@host:5432/name) picks the database.
+# Without it, Django uses the local db.sqlite3 file.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+    )
 }
 
 
@@ -149,6 +154,11 @@ USE_TZ = True
 STATIC_URL = 'static/'
 # `python manage.py collectstatic` copies admin and Swagger CSS/JS here for the server to serve.
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 
 # Email
@@ -252,6 +262,9 @@ if not DEBUG:
     # is done by PythonAnywhere's "Force HTTPS" switch (docs/DEPLOY.md), not by Django.
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    # Hosts like Taqat put HTTPS in front of the app and pass the request on over HTTP.
+    # This header tells Django the original request was HTTPS.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Tadreeb business rules. Values in [brackets] in the SRS are still open team decisions.
 # BR-01 / D-01: credit hours needed to be eligible (proposed default, college to confirm).
