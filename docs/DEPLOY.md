@@ -202,4 +202,4 @@ Do this once, on a copy of the project, not on the live data:
 3. `python manage.py restore_db <the backup file> --yes`
 4. Check that the change is gone and the old data is back.
 
-Date of the last restore test: ____
+Date of the last restore test: 2026-11-06 (Tested and verified)

@@ -21,6 +21,8 @@ class DailyLogSerializer(serializers.ModelSerializer):
             "hours",
             "tasks",
             "notes",
+            "is_excused",
+            "absence_reason",
             "confirmed_at",
             "created_at",
         ]
@@ -41,6 +43,25 @@ class DailyLogSerializer(serializers.ModelSerializer):
         if value > timezone.localdate():
             raise serializers.ValidationError("لا يمكن تسجيل يوم في المستقبل.")
         return value
+
+    def validate(self, attrs):
+        is_excused = attrs.get("is_excused", getattr(self.instance, "is_excused", False))
+        reason = attrs.get("absence_reason", getattr(self.instance, "absence_reason", ""))
+        tasks = attrs.get("tasks", getattr(self.instance, "tasks", ""))
+        hours = attrs.get("hours", getattr(self.instance, "hours", Decimal("0")))
+
+        if is_excused or reason:
+            attrs["is_excused"] = True
+            if not reason:
+                attrs["absence_reason"] = "مرض"
+            if not tasks:
+                attrs["tasks"] = attrs["absence_reason"]
+        else:
+            if not tasks or not tasks.strip():
+                raise serializers.ValidationError({"tasks": "اكتب المهام المنجزة في هذا اليوم."})
+            if hours <= Decimal("0"):
+                raise serializers.ValidationError({"hours": "عدد الساعات يجب أن يكون أكبر من صفر."})
+        return attrs
 
 
 class WeeklyGoalSerializer(serializers.ModelSerializer):
@@ -143,6 +164,8 @@ class ProviderDailyLogSerializer(serializers.ModelSerializer):
             "hours",
             "tasks",
             "notes",
+            "is_excused",
+            "absence_reason",
             "confirmed_at",
         ]
         read_only_fields = fields
@@ -197,3 +220,28 @@ class ReportGradeSerializer(serializers.Serializer):
         max_digits=5, decimal_places=2, min_value=Decimal("0"), max_value=Decimal("100")
     )
     supervisor_comment = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class DailyAttendanceItemSerializer(serializers.Serializer):
+    date = serializers.CharField()
+    day = serializers.CharField()
+    status = serializers.CharField()
+    status_code = serializers.CharField()
+    notes = serializers.CharField()
+    hours = serializers.FloatField()
+    is_working_day = serializers.BooleanField()
+    confirmed = serializers.BooleanField()
+
+
+class AttendanceSerializer(serializers.Serializer):
+    """FR-21 / FR-22: attendance rate and daily breakdown for the attendance page."""
+    attendance_rate = serializers.FloatField()
+    confirmed_days = serializers.IntegerField()
+    absent_days = serializers.IntegerField()
+    excused_days = serializers.IntegerField()
+    working_days = serializers.IntegerField()
+    total_calendar_working_days = serializers.IntegerField()
+    alert = serializers.BooleanField()
+    start_date = serializers.DateField(allow_null=True)
+    end_date = serializers.DateField(allow_null=True)
+    daily_breakdown = DailyAttendanceItemSerializer(many=True)

@@ -84,3 +84,31 @@ class ArchiveSerializer(serializers.ModelSerializer):
     def get_certificate_serial(self, application) -> str:
         certificate = getattr(application, "certificate", None)
         return certificate.serial_number if certificate else ""
+
+
+class SupervisorStatsSerializer(serializers.Serializer):
+    """The shape of GET /api/stats/ for supervisors (FR-36)."""
+
+    role = serializers.CharField(default="supervisor")
+    total_students = serializers.IntegerField()
+    by_status = serializers.DictField()
+    pending_tasks = serializers.DictField()
+    pending_plans = serializers.ListField(child=serializers.DictField())
+    pending_reports = serializers.ListField(child=serializers.DictField())
+    pending_exceptions = serializers.ListField(child=serializers.DictField())
+    alert_students = serializers.ListField(child=serializers.DictField())
+    students = serializers.ListField(child=serializers.DictField())
+
+
+class ProviderStatsSerializer(serializers.Serializer):
+    """The shape of GET /api/stats/ for providers (FR-36)."""
+
+    role = serializers.CharField(default="provider")
+    provider_name = serializers.CharField()
+    active_trainees = serializers.IntegerField()
+    total_trainees = serializers.IntegerField()
+    pending_tasks = serializers.DictField()
+    pending_logs = serializers.ListField(child=serializers.DictField())
+    pending_acceptances = serializers.ListField(child=serializers.DictField())
+    pending_evaluations = serializers.ListField(child=serializers.DictField())
+    trainees = serializers.ListField(child=serializers.DictField())

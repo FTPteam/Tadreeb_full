@@ -1,86 +1,142 @@
-# الخادم (Back-End) — وفاء ومريم
+# خادم منصة تدريب (Back-End) — دليل التشغيل والتوثيق البرمجي
 
-To run Django + Django REST Framework, copy these commands into your terminal (Linux/macOS):
+منصة «تدريب» لإدارة التدريب الميداني — كلية الدراسات المتوسطة، جامعة الأزهر – غزة (Codemap × Taqat).
+تطوير الواجهة الخلفية: **وفاء الحايك ومريم سقا الله**.
 
-```bash
+مبني باستخدام **Python 3.12+** و **Django 6** و **Django REST Framework (DRF)**، مع توثيق تفاعلي عبر **Swagger / OpenAPI**، وحماية أمنية متقدمة، ودعم كامل للغة العربية ومنطقة غزة الزمنية (`Asia/Gaza`).
+
+---
+
+## 1. التشغيل السريع محلياً (NFR-17: في أقل من 5 دقائق)
+
+### على نظام Windows (PowerShell):
+```powershell
 cd backend
-python3 -m venv .venv
-source .venv/bin/activate
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py seed_demo       # تعبئة بيانات تجريبية جاهزة للمشروع
 python manage.py runserver
 ```
 
-On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` instead.
-
-### Login & Auth API
-
-| Method | URL | Body | Returns |
-|---|---|---|---|
-| POST | `/api/auth/login/` | `{"username", "password"}` | `{"access", "refresh"}` (FR-01, NFR-05) |
-| POST | `/api/auth/refresh/` | `{"refresh"}` | `{"access"}` |
-| GET | `/api/auth/me/` | header `Authorization: Bearer <access>` | `{"id", "username", "full_name", "role"}` |
-| POST | `/api/auth/password-reset/` | `{"email"}` | `{"detail"}` (FR-02) |
-| POST | `/api/auth/password-reset/confirm/` | `{"uid", "token", "new_password"}` | `{"detail"}` (FR-02) |
-| GET | `/api/health/` | public | `{"status": "ok"}` |
-| GET / PATCH | `/api/students/me/` | student only; PATCH `phone`, `email`, `cv` | profile + `eligibility` |
-| GET | `/api/students/?search=&department=&specialization=&academic_status=` | supervisor, coordinator, admin | 20 per page |
-| GET / PATCH | `/api/students/<id>/` | supervisor, coordinator, admin | profile + `eligibility` |
-| GET | `/api/departments/` | any logged-in user | departments with `specializations` |
-
-The access token lasts 30 minutes, and sessions terminate after 30 minutes of inactivity (NFR-05). Five consecutive failed login attempts lock out the account for 15 minutes (NFR-05). Login accepts the university ID or the email in `username`. Password reset emails are sent via console locally, and via SMTP in production (FR-02).
-
-Student profile shape:
-
-```json
-{
-  "id": 1, "university_id": "20251234", "full_name": "سارة أحمد", "email": "sara@example.com",
-  "phone": "0599123456", "department": 1, "department_name": "تقنية المعلومات",
-  "specialization": 1, "specialization_name": "هندسة برمجيات",
-  "completed_credit_hours": 95, "gpa": null, "academic_status": "active", "cv": null,
-  "eligibility": {"is_eligible": true, "reasons": [], "min_credit_hours": 90}
-}
+### على أنظمة Linux / macOS:
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py seed_demo       # تعبئة بيانات تجريبية جاهزة للمشروع
+python manage.py runserver
 ```
 
-Eligibility (BR-01) uses `TADREEB_MIN_CREDIT_HOURS` (90 for now, D-01 still open) and `TADREEB_MIN_GPA` (off) in `config/settings.py`. `academic_status` is `active`, `suspended` or `graduated`.
+الخادم سيعمل على: `http://127.0.0.1:8000/`  
+التوثيق التفاعلي للـ APIs (Swagger): `http://127.0.0.1:8000/api/docs/`  
+لوحة إدارة جانغو: `http://127.0.0.1:8000/admin/`
 
-### Application review and placement
+---
 
-Everything happens on `/api/applications/<id>/`, and each role sees only its own applications:
+## 2. الحسابات التجريبية الجاهزة (`seed_demo`)
 
-| Method | URL | Who | Notes |
+| الدور | اسم المستخدم | كلمة المرور | الوصف |
 |---|---|---|---|
-| POST | `/api/applications/<id>/transition/` | supervisor, coordinator | `{"status": "under_review" \| "accepted" \| "rejected" \| "needs_changes" \| "withdrawn", "reason": "..."}` (FR-13, FR-31) |
-| POST | `/api/applications/<id>/assign-supervisor/` | coordinator | `{"supervisor": 4}` (FR-18) |
-| POST | `/api/applications/<id>/allocate/` | supervisor, coordinator | `{"opportunity": 7}`, creates the `Placement` (FR-14) |
-| POST | `/api/applications/<id>/confirm/` | provider | accepts the student (FR-16) and starts the training: `assigned → in_training` |
-| POST | `/api/applications/<id>/approve/` | coordinator | `completed → approved`, then the certificate is issued and the application becomes `certified` (FR-34) |
+| **مدير النظام (Admin)** | `admin` | `Admin123!` | إدارة المستخدمين، إعدادات النظام، وسجل العمليات |
+| **منسق التدريب (Coordinator)** | `demo_coordinator` | `Coord123!` | مراجعة الطلبات، تعيين المشرفين، والاعتماد النهائي |
+| **مشرف أكاديمي (Supervisor)** | `demo_supervisor` | `Super123!` | متابعة الطلاب، تقييم التقارير، والزيارات الميدانية |
+| **جهة تدريب (Provider)** | `demo_provider` | `Provider123!` | تأكيد الحضور، تقييم المتدربين، ومتابعة السجلات |
+| **طالب قيد التدريب (Student)** | `120260010` | `Student123!` | تسجيل اليوميات، رفع التقارير، ومتابعة الحضور |
+| **طالب متخرج مستلم شهادة** | `120260013` | `Student123!` | عرض الشهادة برمز QR والتحقق منها |
 
-Opportunity responses include `free_seats`.
+---
 
-### Training follow-up, certificates and reports
+## 3. خريطة الواجهات البرمجية (API Reference)
 
-| Method | URL | Who | Notes |
-|---|---|---|---|
-| GET | `/api/provider-daily-logs/?confirmed=false` | provider | days written by its trainees, inside its placement dates |
-| POST | `/api/provider-daily-logs/<id>/confirm/` | provider | confirms attendance for the day (BR-05); completes the training once the department's hours are reached (BR-06) |
-| GET | `/api/daily-logs/progress/?application=<id>` | student | confirmed hours, the department's required hours, remaining and percent |
-| GET / POST / DELETE | `/api/reports/` | student uploads (multipart `application`, `title`, `file`), supervisor and coordinator read | delete only before grading (FR-23) |
-| POST | `/api/reports/<id>/grade/` | supervisor | `{"grade": 0-100, "supervisor_comment"}` |
-| GET | `/api/placements/<id>/letter/` | student, supervisor, provider, coordinator | guidance letter PDF (FR-17) |
-| GET | `/api/certificates/` and `/api/certificates/<id>/pdf/` | student (own), supervisor (own students), coordinator | certificate with QR code (FR-34) |
-| POST | `/api/certificates/` and `/api/certificates/<id>/revoke/` | coordinator, admin | issue for an approved application / revoke with `reason` |
-| GET | `/api/certificates/verify/<code>/` and `/verify/<code>/` | public | JSON and HTML check (FR-35) |
-| GET / POST / PATCH | `/api/evaluations/` | provider and supervisor write their own; student, coordinator, admin read | `{"application", "scores": {criterion: 1-5}, "notes"}`, one of each kind per application, editable until approval (FR-25, FR-26) |
-| GET | `/api/evaluations/criteria/` | anyone logged in | the criteria of each kind |
-| GET | `/api/evaluations/final-grade/?application=<id>` | whoever can see the application | provider 40% + supervisor 40% + reports 20%, pass at 60 (FR-27, BR-04) |
-| GET / POST | `/api/provider-ratings/` | the student rates 1-5 once after the training; provider, supervisor, coordinator read | FR-29 |
-| GET | `/api/stats/` | coordinator, admin | dashboard numbers (FR-36) |
-| GET | `/api/exports/applications/` | coordinator, admin | Excel file (FR-37) |
-| GET | `/api/exports/applications/pdf/` | coordinator, admin | PDF table in Arabic (FR-37, NFR-07) |
-| GET | `/api/archive/` | coordinator, admin | certified, rejected and withdrawn files (FR-39) |
+### أ. المصادقة والأمان وإدارة الحسابات (Accounts & Auth)
+* `POST /api/auth/login/`: تسجيل الدخول بالرقم الجامعي أو البريد وكلمة المرور (FR-01). يدعم الإغلاق المؤقت 15 دقيقة بعد 5 محاولات فاشلة (NFR-05).
+* `POST /api/auth/refresh/`: تجديد رمز الوصول Access Token (صالح لمدة 30 دقيقة مع تدوير الـ Refresh Token، NFR-05).
+* `GET /api/auth/me/`: استرجاع بيانات المستخدم الحالي وصلاحياته ودوره في النظام.
+* `POST /api/auth/password-reset/`: طلب رابط استعادة كلمة المرور عبر البريد الإلكتروني (FR-02).
+* `POST /api/auth/password-reset/confirm/`: تأكيد وتعيين كلمة المرور الجديدة عبر الرابط المشفر (FR-02).
+* `GET /api/users/`: إدارة الحسابات، عرض قائمة المشرفين وإحصائيات طلابهم (FR-03, FR-18).
+* `GET / PATCH /api/students/me/`: ملف الطالب الأكاديمي، فحص الأهلية التلقائي (FR-05, FR-06).
 
-Stats, export and archive take the same filters: `year`, `department`, `provider`, `status`, `search`. The coordinator can approve only when the final grade is complete and passing; the certificate is then issued automatically and the application becomes `certified`. The weights and pass mark are `TADREEB_GRADE_WEIGHTS` and `TADREEB_PASS_GRADE` in `config/settings.py` (D-05). Set `TADREEB_INSTITUTION_NAME` and `TADREEB_CERTIFICATE_VERIFY_URL` (e.g. `https://front.example/verify/{code}`) in `.env` when needed.
+### ب. جهات وفرص التدريب والتقديم (Opportunities & Applications)
+* `GET /api/opportunities/`: تصفح الفرص التدريبية المتاحة والمقاعد الشاغرة `free_seats` (FR-09, FR-10).
+* `GET / POST /api/applications/`: إنشاء الطلب، تحديد 3 رغبات، وإرساله للمراجعة (FR-11, FR-12, BR-03).
+* `POST /api/applications/<id>/transition/`: نقل حالة الطلب (قبول، رفض مع ذكر السبب، قيد المراجعة) (FR-13).
+* `POST /api/applications/<id>/allocate/`: توزيع الطالب المقبول على فرصة وتحديد مكان التدريب (FR-14).
+* `POST /api/applications/<id>/confirm/`: تأكيد جهة التدريب لقبول الطالب وبدء التدريب الفعلي (FR-16).
+* `GET /api/placements/<id>/letter/`: إصدار كتاب التوجيه الرسمي بصيغة PDF باللغة العربية (FR-17, NFR-11).
 
-الـ APIs لازم تمشي على الاتفاق بـ [docs/TEAM_AGREEMENT.md](../docs/TEAM_AGREEMENT.md) (أسماء الحقول snake_case، التواريخ YYYY-MM-DD، رموز الحالات...).
-الواجهة حاليًا بتستخدم بيانات وهمية بنفس الشكل: شوفي `frontend/src/api/mock.js` لتعرفي شو الشكل المتوقع.
+### ج. متابعة التدريب، الحضور، وتنبيه الغياب (Training & Attendance)
+* `GET / POST / PATCH / DELETE /api/daily-logs/`: تسجيل الطالب ليوميات التدريب وساعاته المنجزة (FR-20).
+* `GET /api/daily-logs/attendance/?application=<id>`: حساب نسبة الحضور وتقويم الدوام التفصيلي يوماً بيوم (FR-21, FR-22).
+  * **معادلة الحضور:** $\text{الأيام المؤكدة} \div (\text{أيام العمل من الأحد للخميس حتى أمس} - \text{الإجازات المرضية})$.
+  * **الإجازة المرضية:** تُعلم كـ «مرض» وتُستثنى تماماً من المقام والبسط.
+  * **التنبيه التلقائي:** إرسال إشعار فوري للطالب ولمشرفه إذا هبط الحضور عن 80%.
+* `GET /api/provider-daily-logs/`: استعراض الجهة لسجلات متدربيها للتأكيد (BR-05).
+* `POST /api/provider-daily-logs/<id>/confirm/`: تأكيد الجهة لحضور اليوم وإضافة ساعاته لساعات الطالب المعتمدة.
+* `POST /api/provider-daily-logs/<id>/excuse/`: تحديد اليوم كإجازة مرضية / غياب بعذر مع تسجيل السبب (FR-22).
+* `POST /api/provider-daily-logs/record-absence/`: تسجيل غياب مرضي مباشرة ليوم لم يسجل فيه الطالب (FR-22).
+* `GET /api/daily-logs/progress/?application=<id>`: متابعة تقدم الساعات المنجزة والمتبقية ونسبة الإنجاز (BR-06).
+* `GET / POST /api/training-plans/`: خطة التدريب الأسبوعية واعتماد المشرف لها (FR-19).
+* `GET / POST /api/reports/`: رفع التقارير الدورية (FR-23)، ورصد الدرجات والتعليقات من المشرف الأكاديمي.
+* `GET / POST /api/visits/`: تسجيل الزيارات الميدانية للمشرف الأكاديمي مع الملاحظات والتوصيات (FR-24).
+
+### د. التقييمات، الدرجة النهائية، والشهادات (Evaluations & Certificates)
+* `GET / POST /api/evaluations/`: تقييم جهة التدريب (40%) وتقييم المشرف الأكاديمي (40%) (FR-25, FR-26).
+* `GET /api/evaluations/final-grade/?application=<id>`: احتساب الدرجة النهائية التلقائية: جهة 40% + مشرف 40% + تقارير 20%، ودرجة النجاح 60% (FR-27, BR-04).
+* `POST /api/applications/<id>/approve/`: الاعتماد النهائي للمنسق بعد نجاح الطالب، والانتقال لحالة `approved` ثم إصدار الشهادة `certified` (FR-28).
+* `GET /api/certificates/`: استعراض الشهادات المعتمدة وتنزيلها بصيغة PDF موثقة برمز QR ورقم تسلسلي فريد (FR-34).
+* `GET /api/certificates/verify/<uuid>/`: التحقق العام من الشهادة دون تسجيل دخول، مع حماية الخصوصية وعرض الحد الأدنى من البيانات (FR-35, NFR-19).
+
+### هـ. لوحات التحكم والإحصائيات والتصدير (Dashboards & Analytics)
+* `GET /api/stats/`: لوحة معلومات تفاعلية ذكية حسب دور المستخدم المسجل (FR-36):
+  * **المشرف الأكاديمي (`supervisor`):** أرقام طلابه حسب الحالة + قائمة مهام بانتظاره (خطط للاعتماد، تقارير للتقييم، استثناءات للقرار، تنبيهات غياب).
+  * **جهة التدريب (`provider`):** المتدربون النشطون + قائمة مهام بانتظارها (سجلات يومية للتأكيد، متدربون بانتظار القبول، تقييمات أداء مطلوبة).
+  * **المنسق والمدير (`coordinator` / `admin`):** إحصائيات الكلية كاملة، توزيع الأقسام، والمقاعد الشاغرة.
+* `GET /api/stats/supervisor/` و `GET /api/stats/provider/`: مسارات مخصصة ومباشرة للوحات المشرف والجهة.
+* `GET /api/exports/applications/`: تصدير كشوف المتدربين والدرجات إلى ملف **Excel** (FR-37).
+* `GET /api/exports/applications/pdf/`: تصدير تقرير رسمي منسق بجدول A4 بالعربية بصيغة **PDF** (FR-37, NFR-11).
+* `GET /api/archive/`: أرشيف الطلبات المنتهية (المعتمدة، المرفوضة، المنسحبة) مع إمكانية البحث والفلترة (FR-39).
+* `GET /api/audit-logs/`: سجل العمليات الشامل والرقابي، يوثق كل عملية (من، ماذا، ومتى) لحماية أمن النظام (FR-40).
+
+---
+
+## 4. النسخ الاحتياطي والاسترجاع (NFR-08, NFR-09)
+
+* **أخذ نسخة احتياطية فورية:**
+  ```bash
+  python manage.py backup_db
+  ```
+  تُحفظ النسخ تلقائياً في مجلد `backend/backups/` مع الاحتفاظ بآخر 14 نسخة وحذف القديم تلقائياً.
+
+* **استرجاع قاعدة البيانات:**
+  ```bash
+  python manage.py restore_db ./backups/db-YYYY-MM-DD-HHMMSS.sqlite3 --yes
+  ```
+  يتم أخذ نسخة أمان قبل الاستبدال للتراجع عند الحاجة.
+
+---
+
+## 5. الاختبارات وضمان الجودة (Tests & Quality Assurance)
+
+تمت تغطية المنصة باختبارات آلية شاملة تزيد عن **340 اختباراً** تفحص جميع المتطلبات الوظيفية وغير الوظيفية:
+
+```bash
+# تشغيل كامل الاختبارات
+python manage.py test
+
+# فحص صحة مواصفات Swagger / OpenAPI
+python manage.py spectacular --validate --fail-on-warn
+
+# فحص الخصوصية الشامل (NFR-18, NFR-19)
+python manage.py test config.test_privacy
+
+# فحص الأداء وسرعة الاستجابة (NFR-06, NFR-07)
+python manage.py test config.test_performance
+
+# فحص الحضور والتنبيهات (FR-21, FR-22)
+python manage.py test training.test_attendance
+```

@@ -3,7 +3,8 @@ from django.db.models import F
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
-from rest_framework import mixins, serializers, viewsets
+from rest_framework import exceptions, mixins, serializers, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -15,9 +16,11 @@ from audit.models import AuditLog, diff, log_action, snapshot
 from evaluations.grades import is_ready, notify_if_ready
 from notifications.models import Notification, notify
 
+from .attendance import calculate_attendance, check_attendance_and_notify
 from .models import DailyLog, Report, TrainingPlan, Visit, complete_if_done, confirmed_hours, required_hours
 from .serializers import (
     GRADES_LOCKED,
+    AttendanceSerializer,
     DailyLogSerializer,
     ProviderDailyLogSerializer,
     ReportGradeSerializer,
@@ -31,8 +34,12 @@ class DailyLogViewSet(viewsets.ModelViewSet):
     """/api/daily-logs/: a student writes the days of their own training (FR-20)."""
 
     serializer_class = DailyLogSerializer
-    permission_classes = [IsStudent]
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_permissions(self):
+        if self.action == "attendance":
+            return [IsAuthenticated()]
+        return [IsStudent()]
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -78,6 +85,36 @@ class DailyLogViewSet(viewsets.ModelViewSet):
                 "percent": min(int(done * 100 / required), 100),
             }
         )
+
+    @extend_schema(
+        parameters=[OpenApiParameter("application", int, required=False, description="رقم الطلب")],
+        responses=AttendanceSerializer,
+    )
+    @action(detail=False, methods=["get"])
+    def attendance(self, request):
+        """GET /api/daily-logs/attendance/?application=<id>: attendance rate, statistics, and daily calendar (FR-21, FR-22)."""
+        app_id = request.query_params.get("application")
+        user = request.user
+        if app_id and app_id.isdigit():
+            application = get_object_or_404(Application, pk=app_id)
+        elif user.role == User.Role.STUDENT:
+            application = get_object_or_404(
+                Application.objects.order_by("-created_at"), student=user
+            )
+        else:
+            raise serializers.ValidationError({"application": "أرسل رقم الطلب."})
+
+        # Check access (NFR-18)
+        if user.role == User.Role.STUDENT and application.student_id != user.id:
+            raise exceptions.PermissionDenied("لا يمكنك عرض حضور طالب آخر.")
+        elif user.role == User.Role.SUPERVISOR and application.supervisor_id != user.id:
+            raise exceptions.PermissionDenied("هذا الطالب ليس من طلابك.")
+        elif user.role == User.Role.PROVIDER and not application.placements.filter(opportunity__provider__user=user).exists():
+            raise exceptions.PermissionDenied("هذا الطالب ليس متدرباً لديكم.")
+
+        stats = calculate_attendance(application)
+        return Response(AttendanceSerializer(stats).data)
+
 
 
 class IsStudentOrSupervisor(HasRole):
@@ -205,10 +242,82 @@ class ProviderDailyLogViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, 
             log.confirmed_by = request.user
             log.save()
             log_action(request, AuditLog.Action.UPDATE, log, diff(before, snapshot(log)))
+            check_attendance_and_notify(log.application)
             if complete_if_done(log.application):
                 # The evaluations may already be in, so it can be approved right away.
                 notify_if_ready(log.application, was_ready=False)
         return Response(self.get_serializer(log).data)
+
+    @extend_schema(
+        request=inline_serializer("ExcuseLogRequest", {"reason": serializers.CharField(default="مرض")}),
+        responses=ProviderDailyLogSerializer,
+    )
+    @action(detail=True, methods=["post"])
+    def excuse(self, request, pk=None):
+        """POST /api/provider-daily-logs/<id>/excuse/: provider marks a day as an excused absence (FR-22)."""
+        log = self.get_object()
+        if log.application.status != Status.IN_TRAINING:
+            raise serializers.ValidationError("يُسجَّل العذر فقط والطالب «قيد التدريب».")
+        before = snapshot(log)
+        reason = (request.data.get("reason") or "مرض").strip()
+        with transaction.atomic():
+            log.is_excused = True
+            log.absence_reason = reason
+            log.hours = 0
+            log.confirmed_at = timezone.now()
+            log.confirmed_by = request.user
+            log.save()
+            log_action(request, AuditLog.Action.UPDATE, log, diff(before, snapshot(log)))
+            check_attendance_and_notify(log.application)
+        return Response(self.get_serializer(log).data)
+
+    @extend_schema(
+        request=inline_serializer(
+            "RecordAbsenceRequest",
+            {
+                "application": serializers.IntegerField(),
+                "date": serializers.DateField(),
+                "reason": serializers.CharField(default="مرض"),
+            },
+        ),
+        responses=ProviderDailyLogSerializer,
+    )
+    @action(detail=False, methods=["post"], url_path="record-absence")
+    def record_absence(self, request):
+        """POST /api/provider-daily-logs/record-absence/: record an excused day without a log (FR-22)."""
+        app_id = request.data.get("application")
+        log_date = request.data.get("date")
+        reason = (request.data.get("reason") or "مرض").strip()
+        if not app_id or not log_date:
+            raise serializers.ValidationError({"detail": "أرسل رقم الطلب والتاريخ."})
+        application = get_object_or_404(
+            Application,
+            pk=app_id,
+            placements__opportunity__provider__user=request.user,
+            placements__is_active=True,
+        )
+        if application.status != Status.IN_TRAINING:
+            raise serializers.ValidationError("يُسجَّل العذر فقط والطالب «قيد التدريب».")
+        log, created = DailyLog.objects.get_or_create(
+            application=application,
+            date=log_date,
+            defaults={
+                "is_excused": True,
+                "absence_reason": reason,
+                "hours": 0,
+                "tasks": reason,
+                "confirmed_at": timezone.now(),
+                "confirmed_by": request.user,
+            },
+        )
+        if not created:
+            log.is_excused = True
+            log.absence_reason = reason
+            log.confirmed_at = timezone.now()
+            log.confirmed_by = request.user
+            log.save()
+        check_attendance_and_notify(application)
+        return Response(self.get_serializer(log).data, status=201 if created else 200)
 
 
 class CanSeeReports(HasRole):
