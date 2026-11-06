@@ -20,8 +20,9 @@ class AnalyticsTestData(APITestCase):
         self.it = Department.objects.create(name="تقنية المعلومات")
         self.business = Department.objects.create(name="إدارة الأعمال")
         specialization = Specialization.objects.create(department=self.it, name="برمجة")
+        self.provider_user = User.objects.create_user(username="company_user", password="x", role=User.Role.PROVIDER)
         self.provider = Provider.objects.create(
-            name="شركة التقنية", sector="تقنية", city="غزة", contact_name="م", contact_phone="0599000000"
+            name="شركة التقنية", sector="تقنية", city="غزة", contact_name="م", contact_phone="0599000000", user=self.provider_user
         )
         self.opportunity = Opportunity.objects.create(
             provider=self.provider,
@@ -34,6 +35,8 @@ class AnalyticsTestData(APITestCase):
             location="غزة",
         )
         self.training = self.make_application("20250001", "سارة", self.it, Status.IN_TRAINING)
+        self.training.supervisor = self.sup
+        self.training.save()
         self.certified = self.make_application("20250002", "عمر", self.it, Status.CERTIFIED)
         self.rejected = self.make_application("20250003", "ليلى", self.business, Status.REJECTED)
         Placement.objects.create(
@@ -97,12 +100,56 @@ class StatsTests(AnalyticsTestData):
         self.assertEqual(response.data["applications"]["total"], 1)
         self.assertEqual(response.data["certificates"]["issued"], 0)
 
-    def test_only_coordinator_and_admin(self):
-        self.client.force_authenticate(self.admin)
-        self.assertEqual(self.client.get("/api/stats/").status_code, 200)
-        for user in (self.sup, self.training.student):
-            self.client.force_authenticate(user)
-            self.assertEqual(self.client.get("/api/stats/").status_code, 403)
+    def test_student_cannot_access_stats(self):
+        self.client.force_authenticate(self.training.student)
+        self.assertEqual(self.client.get("/api/stats/").status_code, 403)
+
+    def test_supervisor_dashboard_stats_and_tasks(self):
+        """FR-36: supervisor gets student numbers and pending tasks."""
+        from training.models import Report, TrainingPlan
+        from applications.models import ExceptionRequest
+
+        # Add a submitted plan, an ungraded report, and a pending exception
+        plan = TrainingPlan.objects.create(application=self.training, status=TrainingPlan.Status.SUBMITTED)
+        report = Report.objects.create(application=self.training, title="تقرير أسبوعي", file="reports/sample.pdf")
+        exc = ExceptionRequest.objects.create(
+            application=self.training, kind=ExceptionRequest.Kind.EXTENSION, reason="ظروف خاصة"
+        )
+
+        self.client.force_authenticate(self.sup)
+        response = self.client.get("/api/stats/")
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self.assertEqual(data["role"], "supervisor")
+        self.assertEqual(data["total_students"], 1)
+        self.assertEqual(data["by_status"][Status.IN_TRAINING], 1)
+        self.assertEqual(data["pending_tasks"]["plans_to_approve"], 1)
+        self.assertEqual(data["pending_tasks"]["reports_to_grade"], 1)
+        self.assertEqual(data["pending_tasks"]["exceptions_to_decide"], 1)
+        self.assertEqual(len(data["students"]), 1)
+        self.assertEqual(data["students"][0]["student_name"], "سارة")
+
+        # Also test dedicated endpoint
+        sub_resp = self.client.get("/api/stats/supervisor/")
+        self.assertEqual(sub_resp.status_code, 200)
+        self.assertEqual(sub_resp.data["role"], "supervisor")
+
+    def test_provider_dashboard_stats_and_tasks(self):
+        """FR-36: provider gets active trainees and pending tasks."""
+        self.client.force_authenticate(self.provider_user)
+        response = self.client.get("/api/stats/")
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self.assertEqual(data["role"], "provider")
+        self.assertEqual(data["provider_name"], "شركة التقنية")
+        self.assertEqual(data["active_trainees"], 1)
+        self.assertEqual(data["pending_tasks"]["days_to_confirm"], 1)  # one unconfirmed daily log from setUp
+        self.assertEqual(len(data["trainees"]), 1)
+
+        # Also test dedicated endpoint
+        prov_resp = self.client.get("/api/stats/provider/")
+        self.assertEqual(prov_resp.status_code, 200)
+        self.assertEqual(prov_resp.data["role"], "provider")
 
 
 class ExportTests(AnalyticsTestData):

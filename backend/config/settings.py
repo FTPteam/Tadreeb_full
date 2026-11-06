@@ -279,6 +279,8 @@ TADREEB_REQUIRED_TRAINING_HOURS = 240
 # BR-04 / D-05: the final grade's parts (percent, adding up to 100) and the pass mark.
 TADREEB_GRADE_WEIGHTS = {"provider": 40, "supervisor": 40, "reports": 20}
 TADREEB_PASS_GRADE = 60
+# FR-22 / BR-05: alert when attendance drops below this threshold (percent).
+TADREEB_ATTENDANCE_ALERT = 80
 
 # Printed at the top of the guidance letter (FR-17) and the certificate (FR-34).
 TADREEB_INSTITUTION_NAME = os.environ.get("TADREEB_INSTITUTION_NAME", "جامعة الأزهر")

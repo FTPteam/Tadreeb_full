@@ -18,9 +18,13 @@ class DailyLog(models.Model):
     hours = models.DecimalField(
         max_digits=4,
         decimal_places=2,
-        validators=[MinValueValidator(Decimal("0.25")), MaxValueValidator(Decimal("12"))],
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("12"))],
+        default=Decimal("0"),
     )
-    tasks = models.TextField()
+    tasks = models.TextField(blank=True, default="")
+    # FR-22 / BR-05: excused absence / sick leave (مرض / عذر مرضي).
+    is_excused = models.BooleanField(default=False)
+    absence_reason = models.CharField(max_length=255, blank=True, default="")
     notes = models.TextField(blank=True)
 
     # BR-05: the provider confirms each day; empty means not confirmed yet.

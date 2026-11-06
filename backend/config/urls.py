@@ -12,7 +12,13 @@ from drf_spectacular.utils import extend_schema, inline_serializer
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework import serializers
 
-from analytics.views import ApplicationsExportView, ArchiveViewSet, StatsView
+from analytics.views import (
+    ApplicationsExportView,
+    ArchiveViewSet,
+    ProviderStatsView,
+    StatsView,
+    SupervisorStatsView,
+)
 from analytics.pdf_export import ApplicationsPdfExportView
 from accounts.views import (
     DepartmentViewSet,
@@ -96,6 +102,8 @@ urlpatterns = [
     path("verify/<uuid:code>/", verify_certificate_page, name="certificate-verify-page"),
     path("api/placements/<int:pk>/letter/", placement_letter),
     path("api/stats/", StatsView.as_view()),
+    path("api/stats/supervisor/", SupervisorStatsView.as_view()),
+    path("api/stats/provider/", ProviderStatsView.as_view()),
     path("api/exports/applications/", ApplicationsExportView.as_view()),
     path("api/exports/applications/pdf/", ApplicationsPdfExportView.as_view()),
     path("api/", include(router.urls)),
