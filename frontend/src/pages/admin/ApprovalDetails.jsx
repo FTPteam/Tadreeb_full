@@ -1,527 +1,667 @@
+import AcademicFooter from "../../components/shared/AcademicFooter";
+import AdminHeader from "../../components/admin/Header";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import Header from "../../components/admin/Header";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Bell,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  Menu,
+  X,
+} from "lucide-react";
+
 import Sidebar from "../../components/admin/Sidebar";
+
+const APPROVALS = {
+  1: {
+    id: 1,
+    student: "أمل أحمد صيام",
+    organization: "شركة القدس للاتصالات",
+    requestDate: "2025/10/01",
+    officer: "د. سامر يوسف",
+    status: "pending",
+  },
+  2: {
+    id: 2,
+    student: "محمود رضوان",
+    organization: "شركة المشرق الرقمية",
+    requestDate: "2025/09/29",
+    officer: "د. سامر يوسف",
+    status: "approved",
+  },
+  3: {
+    id: 3,
+    student: "سارة عبد الرحمن",
+    organization: "شركة جوال",
+    requestDate: "2025/09/28",
+    officer: "أ. مريم عاشور",
+    status: "review",
+  },
+};
 
 export default function ApprovalDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const previousApprovals = [
-    {
-      date: "2025/04/21",
-      action: "مراجعة الطلب",
-      responsible: "مسؤول التدريب",
-      notes: "-",
-    },
-    {
-      date: "2025/04/22",
-      action: "توزيع الطالب",
-      responsible: "مسؤول التدريب",
-      notes: "-",
-    },
-    {
-      date: "2025/04/23",
-      action: "موافقة جهة التدريب",
-      responsible: "شركة التقنية",
-      notes: "-",
-    },
-  ];
+  const initialData =
+    APPROVALS[id] || APPROVALS[1];
+
+  const [approval, setApproval] =
+    useState(initialData);
+
+  const [showConfirm, setShowConfirm] =
+    useState(false);
+
+  const toggleSidebar = () => {
+    window.dispatchEvent(
+      new Event("toggle-student-sidebar")
+    );
+  };
+
+  const confirmApproval = () => {
+    setApproval((previous) => ({
+      ...previous,
+      status: "approved",
+    }));
+
+    setShowConfirm(false);
+  };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-white">
-      <Header />
+    <div
+      dir="rtl"
+      className="
+        flex
+        h-screen
+        w-full
+        overflow-hidden
+        bg-[#F8FAFC]
+        font-['Cairo']
+        text-[#111C2D]
+      "
+    >
+      <Sidebar />
 
-      <div className="flex">
-        <Sidebar />
+      <div
+        className="
+          flex
+          h-screen
+          min-w-0
+          flex-1
+          flex-col
+          overflow-hidden
+        "
+      >
+        {/* HEADER */}
 
-        <main className="flex-1 min-w-0 px-[24px] pt-[14px] pb-[20px]">
-          {/* ================= PAGE HEADER ================= */}
-          <div className="flex items-center justify-between mb-[10px]">
-            <div>
-              <div className="flex items-center gap-[6px] text-[11px] text-[#7a8393] mb-[2px]">
-                <span>الرئيسية</span>
-                <span>›</span>
+        <AdminHeader />
 
-                <span
-                  onClick={() => navigate("/admin/approvals")}
-                  className="cursor-pointer hover:text-[#4b5568]"
+        {/* CONTENT */}
+
+        <main
+          className="
+            min-w-0
+            flex-1
+            overflow-x-hidden
+            overflow-y-auto
+            px-4
+            pb-6
+            pt-5
+            sm:px-6
+            lg:px-8
+          "
+        >
+          <div className="mx-auto w-full max-w-[1450px]">
+            {/* BREADCRUMB */}
+
+            <div
+              className="
+                mb-7
+                flex
+                items-center
+                gap-2
+                text-[12px]
+                text-[#64748B]
+              "
+            >
+              <button
+                onClick={() =>
+                  navigate("/admin/dashboard")
+                }
+                className="hover:text-[#09379A]"
+              >
+                الرئيسية
+              </button>
+
+              <ChevronLeft size={15} />
+
+              <span className="font-semibold text-[#111C2D]">
+                تفاصيل الاعتماد
+              </span>
+            </div>
+
+            {/* HEADER */}
+
+            <section
+              className="
+                mb-6
+                flex
+                flex-col
+                gap-4
+                sm:flex-row
+                sm:items-start
+                sm:justify-between
+              "
+            >
+              <div>
+                <h1
+                  className="
+                    m-0
+                    text-[25px]
+                    font-bold
+                    text-[#111C2D]
+                  "
                 >
-                  الموافقات والاعتمادات
-                </span>
+                  تفاصيل اعتماد التدريب
+                </h1>
 
-                <span>›</span>
-                <span>تفاصيل الموافقة</span>
+                <p className="m-0 mt-1 text-[12px] text-[#64748B]">
+                  {approval.student} - {approval.organization}
+                </p>
               </div>
 
-              <h1 className="text-[23px] font-bold text-[#1b2430]">
-                تفاصيل الموافقة
-              </h1>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigate("/admin/approvals")}
-              className="
-                h-[30px]
-                px-[12px]
-                rounded-[6px]
-                border
-                border-[#b9c0cc]
-                bg-white
-                text-[10px]
-                text-[#3b4454]
-                hover:bg-[#eef0f4]
-              "
-            >
-              رجوع ←
-            </button>
-          </div>
-
-          {/* ================= MAIN CONTENT ================= */}
-          <div className="flex gap-[14px]">
-            {/* ================= MAIN COLUMN ================= */}
-            <div className="flex-1 min-w-0 grid gap-[10px] content-start">
-              {/* Request Data */}
-              <section
-                className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  px-[14px]
-                  py-[12px]
-                "
-              >
-                <h2 className="text-[15px] font-bold text-[#1f2733] mb-[10px]">
-                  بيانات الطلب
-                </h2>
-
-                <div className="grid grid-cols-3 gap-[8px]">
-                  <InfoBox
-                    label="اسم الطالب"
-                    value="أحمد خالد"
-                  />
-
-                  <InfoBox
-                    label="الرقم الجامعي"
-                    value="20231045"
-                  />
-
-                  <InfoBox
-                    label="التخصص"
-                    value="هندسة البرمجيات"
-                  />
-
-                  <InfoBox
-                    label="جهة التدريب"
-                    value="شركة التقنية"
-                  />
-
-                  <InfoBox
-                    label="فرصة التدريب"
-                    value="مطور برمجيات متدرب"
-                  />
-
-                  <StatusBox
-                    label="حالة الطلب"
-                    text="بانتظار الموافقة"
-                    type="waiting"
-                  />
-
-                  <InfoBox
-                    label="تاريخ التقديم"
-                    value="2025/04/20"
-                  />
-
-                  <InfoBox
-                    label="تاريخ التوزيع"
-                    value="2025/04/22"
-                  />
-
-                  <InfoBox
-                    label="اسم المسؤول عن الموافقة"
-                    value="عميد الكلية"
-                  />
-                </div>
-              </section>
-
-              {/* Approval Status */}
-              <section
-                className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  px-[14px]
-                  py-[12px]
-                "
-              >
-                <h2 className="text-[15px] font-bold text-[#1f2733] mb-[10px]">
-                  حالة الموافقات
-                </h2>
-
-                <div className="grid grid-cols-2 gap-[8px]">
-                  <StatusBox
-                    label="حالة موافقة جهة التدريب"
-                    text="تمت الموافقة"
-                    type="approved"
-                  />
-
-                  <StatusBox
-                    label="حالة موافقة الكلية"
-                    text="بانتظار الموافقة"
-                    type="waiting"
-                  />
-                </div>
-              </section>
-
-              {/* Approval Notes */}
-              <section
-                className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  px-[14px]
-                  py-[12px]
-                "
-              >
-                <h2 className="text-[15px] font-bold text-[#1f2733] mb-[8px]">
-                  ملاحظات الموافقة
-                </h2>
-
-                <textarea
-                  placeholder="أضف ملاحظاتك هنا ..."
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate("/admin/approvals")
+                  }
                   className="
-                    w-full
-                    min-h-[100px]
-                    resize-none
+                    flex
+                    h-[44px]
+                    items-center
+                    gap-2
                     rounded-[8px]
                     border
-                    border-[#c9cfd9]
+                    border-[#E0E7F2]
                     bg-white
-                    px-[12px]
-                    py-[10px]
-                    outline-none
-                    text-[11px]
-                    text-[#2b3340]
-                    placeholder:text-[#8a93a3]
-                    focus:border-[#8a93a3]
+                    px-5
+                    text-[12px]
+                    font-semibold
                   "
-                />
-              </section>
+                >
+                  <ArrowRight size={16} />
+                  رجوع
+                </button>
 
-              {/* Previous Approvals */}
-              <section
-                className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  overflow-hidden
-                "
-              >
-                <div className="px-[14px] py-[10px]">
-                  <h2 className="text-[15px] font-bold text-[#1f2733]">
-                    سجل الموافقات السابقة
-                  </h2>
-                </div>
+                {approval.status !== "approved" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowConfirm(true)
+                    }
+                    className="
+                      flex
+                      h-[44px]
+                      items-center
+                      gap-2
+                      rounded-[8px]
+                      bg-[#FF6534]
+                      px-5
+                      text-[12px]
+                      font-bold
+                      text-white
+                      hover:bg-[#E95526]
+                    "
+                  >
+                    <BadgeCheck size={17} />
+                    اعتماد التدريب
+                  </button>
+                )}
+              </div>
+            </section>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right">
-                    <thead className="bg-[#f1f3f7]">
-                      <tr>
-                        {[
-                          "التاريخ",
-                          "الإجراء",
-                          "المسؤول",
-                          "الملاحظات",
-                        ].map((heading) => (
-                          <th
-                            key={heading}
-                            className="
-                              px-[10px]
-                              py-[8px]
-                              text-[10px]
-                              font-semibold
-                              text-[#3b4454]
-                              border-b
-                              border-[#dfe3ea]
-                            "
-                          >
-                            {heading}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
+            {/* STEPS */}
 
-                    <tbody>
-                      {previousApprovals.map((item, index) => (
-                        <tr
-                          key={index}
-                          className="border-b border-[#eceff4] last:border-b-0"
-                        >
-                          <td className="px-[10px] py-[9px] text-[10px] text-[#667085]">
-                            {item.date}
-                          </td>
-
-                          <td className="px-[10px] py-[9px] text-[10px] text-[#2b3340]">
-                            {item.action}
-                          </td>
-
-                          <td className="px-[10px] py-[9px] text-[10px] text-[#4a5465]">
-                            {item.responsible}
-                          </td>
-
-                          <td className="px-[10px] py-[9px] text-[10px] text-[#667085]">
-                            {item.notes}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-
-            {/* ================= SIDE COLUMN ================= */}
-            <aside className="w-[300px] shrink-0">
-              <section
-                className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  px-[14px]
-                  py-[12px]
-                "
-              >
-                <h2 className="text-[15px] font-bold text-[#1f2733] mb-[12px]">
-                  مسار الموافقة
-                </h2>
-
-                <TimelineItem
-                  title="تقديم الطلب"
-                  status="done"
+            <section
+              className="
+                mb-6
+                rounded-[12px]
+                border
+                border-[#E0E7F2]
+                bg-white
+                px-5
+                py-5
+              "
+            >
+              <div className="grid gap-5 md:grid-cols-4 md:gap-0">
+                <Step
+                  label="تقديم الطلب"
+                  state="done"
                 />
 
-                <TimelineItem
-                  title="مراجعة الطلب"
-                  status="done"
+                <Step
+                  label="مراجعة المشرف"
+                  state="done"
                 />
 
-                <TimelineItem
-                  title="توزيع الطالب"
-                  status="done"
+                <Step
+                  number="3"
+                  label="اعتماد التدريب"
+                  state={
+                    approval.status === "approved"
+                      ? "done"
+                      : "active"
+                  }
                 />
 
-                <TimelineItem
-                  title="موافقة جهة التدريب"
-                  status="done"
-                />
-
-                <TimelineItem
-                  title="موافقة الكلية"
-                  status="current"
-                />
-
-                <TimelineItem
-                  title="بدء التدريب"
-                  status="todo"
+                <Step
+                  number="4"
+                  label="بدء التدريب"
+                  state={
+                    approval.status === "approved"
+                      ? "active"
+                      : "upcoming"
+                  }
                   last
                 />
-              </section>
-            </aside>
+              </div>
+            </section>
+
+            {/* GRID */}
+
+            <div
+              className="
+                grid
+                grid-cols-1
+                gap-5
+                xl:grid-cols-[minmax(0,1.7fr)_400px]
+              "
+            >
+              <div className="flex flex-col gap-5">
+                {/* APPROVAL DATA */}
+
+                <Card title="بيانات الاعتماد">
+                  <div
+                    className="
+                      grid
+                      grid-cols-1
+                      gap-5
+                      sm:grid-cols-2
+                      xl:grid-cols-4
+                    "
+                  >
+                    <DataItem
+                      label="الطالب"
+                      value={approval.student}
+                    />
+
+                    <DataItem
+                      label="الجهة"
+                      value={approval.organization}
+                    />
+
+                    <DataItem
+                      label="تاريخ الطلب"
+                      value={approval.requestDate}
+                    />
+
+                    <DataItem
+                      label="المسؤول عن الاعتماد"
+                      value={approval.officer}
+                    />
+                  </div>
+                </Card>
+
+                {/* CHECKLIST */}
+
+                <Card title="قائمة التحقق">
+                  <div className="space-y-3">
+                    <CheckItem text="استيفاء متطلبات التخصص" />
+                    <CheckItem text="موافقة جهة التدريب" />
+                    <CheckItem text="كتاب التدريب الرسمي مرفق" />
+                    <CheckItem text="لا يوجد تعارض في الجدول الدراسي" />
+                  </div>
+                </Card>
+              </div>
+
+              {/* STATUS */}
+
+              <Card title="الحالة">
+                <div
+                  className={`
+                    inline-flex
+                    items-center
+                    gap-2
+                    rounded-full
+                    px-3
+                    py-2
+                    text-[11px]
+                    font-semibold
+
+                    ${
+                      approval.status === "approved"
+                        ? "bg-[#DCFCE7] text-[#15803D]"
+                        : "bg-[#FFE4D6] text-[#C55A1D]"
+                    }
+                  `}
+                >
+                  <span className="h-[6px] w-[6px] rounded-full bg-current" />
+
+                  {approval.status === "approved"
+                    ? "تم الاعتماد"
+                    : "بانتظار الاعتماد"}
+                </div>
+              </Card>
+            </div>
+
+            <AcademicFooter audience="admin" />
           </div>
-
-          {/* ================= ACTIONS ================= */}
-          <div className="flex justify-end gap-[10px] mt-[10px]">
-            <button
-              type="button"
-              className="
-                h-[34px]
-                px-[16px]
-                rounded-[7px]
-                bg-[#4b5568]
-                text-white
-                text-[11px]
-                font-semibold
-                hover:bg-[#3f4858]
-              "
-            >
-              ✓ موافقة
-            </button>
-
-            <button
-              type="button"
-              className="
-                h-[34px]
-                px-[16px]
-                rounded-[7px]
-                border
-                border-[#b9c0cc]
-                bg-white
-                text-[11px]
-                text-[#3b4454]
-                hover:bg-[#eef0f4]
-              "
-            >
-              × رفض
-            </button>
-
-            <button
-              type="button"
-              className="
-                h-[34px]
-                px-[16px]
-                rounded-[7px]
-                border
-                border-[#b9c0cc]
-                bg-white
-                text-[11px]
-                text-[#3b4454]
-                hover:bg-[#eef0f4]
-              "
-            >
-              ✎ طلب تعديل
-            </button>
-
-            <button
-              type="button"
-              className="
-                h-[34px]
-                px-[16px]
-                rounded-[7px]
-                border
-                border-[#b9c0cc]
-                bg-white
-                text-[11px]
-                text-[#3b4454]
-                hover:bg-[#eef0f4]
-              "
-            >
-              ✎ إضافة ملاحظة
-            </button>
-          </div>
-
-          <div className="hidden">{id}</div>
         </main>
       </div>
+
+      {/* =====================================================
+          CONFIRM MODAL
+      ====================================================== */}
+
+      {showConfirm && (
+        <div
+          className="
+            fixed
+            inset-0
+            z-[100]
+            flex
+            items-center
+            justify-center
+            bg-[#0F1B2E]/95
+            p-4
+          "
+        >
+          <section
+            className="
+              w-full
+              max-w-[520px]
+              rounded-[14px]
+              bg-white
+              p-7
+              shadow-2xl
+            "
+          >
+            <div
+              className="
+                mb-5
+                flex
+                h-[56px]
+                w-[56px]
+                items-center
+                justify-center
+                rounded-full
+                bg-[#DCFCE7]
+                text-[#15803D]
+              "
+            >
+              <BadgeCheck size={27} />
+            </div>
+
+            <h2
+              className="
+                m-0
+                text-[20px]
+                font-bold
+                text-[#111C2D]
+              "
+            >
+              اعتماد التدريب
+            </h2>
+
+            <p
+              className="
+                m-0
+                mt-3
+                text-[12px]
+                leading-7
+                text-[#64748B]
+              "
+            >
+              سيتم اعتماد تدريب الطالبة{" "}
+              <strong className="text-[#111C2D]">
+                {approval.student}
+              </strong>{" "}
+              لدى {approval.organization} وإصدار كتاب التوجيه.
+            </p>
+
+            <div
+              className="
+                mt-6
+                flex
+                justify-end
+                gap-3
+              "
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setShowConfirm(false)
+                }
+                className="
+                  h-[44px]
+                  rounded-[8px]
+                  border
+                  border-[#E0E7F2]
+                  bg-white
+                  px-5
+                  text-[12px]
+                "
+              >
+                إلغاء
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmApproval}
+                className="
+                  flex
+                  h-[44px]
+                  items-center
+                  gap-2
+                  rounded-[8px]
+                  bg-[#FF6534]
+                  px-5
+                  text-[12px]
+                  font-bold
+                  text-white
+                "
+              >
+                <BadgeCheck size={16} />
+                اعتماد
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
 
-function InfoBox({ label, value }) {
+/* =========================================================
+   COMPONENTS
+========================================================= */
+
+function Card({ title, children }) {
   return (
-    <div
+    <section
       className="
+        rounded-[12px]
         border
-        border-[#e1e5ec]
-        rounded-[8px]
-        bg-[#fbfcfd]
-        px-[11px]
-        py-[8px]
+        border-[#E0E7F2]
+        bg-white
+        p-5
       "
     >
-      <p className="text-[9px] text-[#7a8393] mb-[2px]">
+      <h2
+        className="
+          m-0
+          border-b
+          border-[#E6EBF5]
+          pb-4
+          text-[16px]
+          font-bold
+          text-[#062569]
+        "
+      >
+        {title}
+      </h2>
+
+      <div className="mt-4">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function DataItem({ label, value }) {
+  return (
+    <div>
+      <p className="m-0 text-[10px] text-[#64748B]">
         {label}
       </p>
 
-      <p className="text-[10px] font-semibold text-[#2b3340]">
+      <p
+        className="
+          m-0
+          mt-1
+          text-[12px]
+          font-semibold
+          text-[#111C2D]
+        "
+      >
         {value}
       </p>
     </div>
   );
 }
 
-function StatusBox({ label, text, type }) {
-  const statusClass =
-    type === "approved"
-      ? "bg-[#dff1e6] text-[#236a45]"
-      : "bg-[#fff1cc] text-[#8a6515]";
+function CheckItem({ text }) {
+  return (
+    <div
+      className="
+        flex
+        items-center
+        gap-2
+        text-[11px]
+        text-[#111C2D]
+      "
+    >
+      <CheckCircle2
+        size={17}
+        className="text-[#15803D]"
+      />
+
+      {text}
+    </div>
+  );
+}
+
+function Step({
+  number,
+  label,
+  state,
+  last = false,
+}) {
+  const done = state === "done";
+  const active = state === "active";
 
   return (
     <div
       className="
-        border
-        border-[#e1e5ec]
-        rounded-[8px]
-        bg-[#fbfcfd]
-        px-[11px]
-        py-[8px]
+        relative
+        flex
+        items-center
+        md:flex-1
       "
     >
-      <p className="text-[9px] text-[#7a8393] mb-[4px]">
-        {label}
-      </p>
-
-      <span
-        className={`
-          inline-flex
-          px-[9px]
-          py-[3px]
-          rounded-full
-          text-[9px]
-          font-medium
-          ${statusClass}
-        `}
+      <div
+        className="
+          relative
+          z-10
+          flex
+          items-center
+          gap-3
+          bg-white
+          px-2
+        "
       >
-        {text}
-      </span>
-    </div>
-  );
-}
-
-function TimelineItem({ title, status, last = false }) {
-  const circleStyle =
-    status === "done"
-      ? "bg-[#4b5568] text-white"
-      : status === "current"
-      ? "bg-[#fff1cc] text-[#8a6515] border border-[#e8cc7c]"
-      : "bg-[#eceff4] text-[#8a93a3]";
-
-  return (
-    <div className="flex gap-[9px]">
-      <div className="flex flex-col items-center">
         <div
           className={`
-            w-[22px]
-            h-[22px]
-            rounded-full
             flex
+            h-[34px]
+            w-[34px]
             items-center
             justify-center
-            text-[9px]
-            shrink-0
-            ${circleStyle}
+            rounded-full
+            border
+            text-[11px]
+            font-bold
+
+            ${
+              done
+                ? "border-[#15803D] bg-[#15803D] text-white"
+                : active
+                ? "border-[#09379A] bg-[#09379A] text-white"
+                : "border-[#D7E0EB] bg-white text-[#94A3B8]"
+            }
           `}
         >
-          {status === "done"
-            ? "✓"
-            : status === "current"
-            ? "◷"
-            : "•"}
+          {done ? (
+            <Check size={16} />
+          ) : (
+            number
+          )}
         </div>
 
-        {!last && (
-          <div className="w-px h-[34px] bg-[#dfe3ea]" />
-        )}
+        <span
+          className={`
+            whitespace-nowrap
+            text-[11px]
+            font-semibold
+
+            ${
+              done
+                ? "text-[#15803D]"
+                : active
+                ? "text-[#09379A]"
+                : "text-[#64748B]"
+            }
+          `}
+        >
+          {label}
+        </span>
       </div>
 
-      <div className="pt-[2px]">
-        <p className="text-[10px] font-semibold text-[#2b3340]">
-          {title}
-        </p>
+      {!last && (
+        <div
+          className={`
+            absolute
+            left-0
+            right-[45px]
+            top-[17px]
+            hidden
+            h-[2px]
+            md:block
 
-        <p className="text-[9px] text-[#7a8393]">
-          {status === "done"
-            ? "مكتمل"
-            : status === "current"
-            ? "قيد التنفيذ"
-            : "لم يبدأ بعد"}
-        </p>
-      </div>
+            ${
+              done
+                ? "bg-[#15803D]"
+                : "bg-[#DCE5F0]"
+            }
+          `}
+        />
+      )}
     </div>
   );
 }
+

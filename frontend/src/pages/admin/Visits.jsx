@@ -1,544 +1,531 @@
+import AcademicFooter from "../../components/shared/AcademicFooter";
+import AdminHeader from "../../components/admin/Header";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import Header from "../../components/admin/Header";
+import {
+  Bell,
+  Menu,
+  Search,
+  SlidersHorizontal,
+  ArrowDownUp,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+} from "lucide-react";
+
 import Sidebar from "../../components/admin/Sidebar";
+
+const STUDENTS = [
+  {
+    id: 1,
+    name: "أمل أحمد",
+    specialization: "البرمجيات وقواعد البيانات",
+    organization: "شركة القدس للاتصالات",
+    progress: 60,
+    attendance: 92,
+    status: "active",
+  },
+  {
+    id: 2,
+    name: "محمود رضوان",
+    specialization: "تكنولوجيا علم البيانات",
+    organization: "شركة المشرق الرقمية",
+    progress: 55,
+    attendance: 88,
+    status: "active",
+  },
+  {
+    id: 3,
+    name: "سارة عبد الرحمن",
+    specialization: "الاتصالات وإنترنت الأشياء",
+    organization: "شركة جوال",
+    progress: 35,
+    attendance: 81,
+    status: "active",
+  },
+  {
+    id: 4,
+    name: "أنس البيطار",
+    specialization: "إلكترونيات صناعية وتحكم",
+    organization: "شركة الأمل للأنظمة الصناعية",
+    progress: 100,
+    attendance: 95,
+    status: "completed",
+  },
+];
 
 export default function Visits() {
   const navigate = useNavigate();
 
-  const visits = [
-    {
-      id: 1,
-      student: "أحمد خالد",
-      supervisor: "د. محمد علي",
-      organization: "مستشفى القدس",
-      date: "2025/04/20",
-      type: "زيارة ميدانية",
-      status: "مكتملة",
-    },
-    {
-      id: 2,
-      student: "سارة علي",
-      supervisor: "أ. ليلى حسن",
-      organization: "شركة الاتصالات",
-      date: "2025/04/18",
-      type: "متابعة دورية",
-      status: "مكتملة",
-    },
-    {
-      id: 3,
-      student: "محمد عادل",
-      supervisor: "د. محمد شريف",
-      organization: "مركز الإبداع الرقمي",
-      date: "2025/04/16",
-      type: "زيارة ميدانية",
-      status: "تحتاج متابعة",
-    },
-    {
-      id: 4,
-      student: "فاطمة الزهراء",
-      supervisor: "أ. خالد يوسف",
-      organization: "جمعية الهلال الأحمر",
-      date: "2025/04/14",
-      type: "متابعة دورية",
-      status: "مكتملة",
-    },
-    {
-      id: 5,
-      student: "عمر يوسف",
-      supervisor: "د. سمير كمال",
-      organization: "مستشفى الأمل",
-      date: "2025/04/12",
-      type: "زيارة ميدانية",
-      status: "مؤجلة",
-    },
-    {
-      id: 6,
-      student: "ليلى حسن",
-      supervisor: "أ. محمد عبد الله",
-      organization: "شركة السلام",
-      date: "2025/04/10",
-      type: "متابعة دورية",
-      status: "مكتملة",
-    },
-    {
-      id: 7,
-      student: "خالد محمود",
-      supervisor: "د. نادر فارس",
-      organization: "المركز الطبي الجامعي",
-      date: "2025/04/08",
-      type: "زيارة ميدانية",
-      status: "تحتاج متابعة",
-    },
-  ];
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState("name");
+  const [page, setPage] = useState(1);
 
-  const getStatusStyle = (status) => {
-    if (status === "مكتملة") {
-      return "bg-[#dff1e6] text-[#236a45]";
-    }
+  const filtered = useMemo(() => {
+    let data = STUDENTS.filter((student) => {
+      const query = search.trim().toLowerCase();
 
-    if (status === "تحتاج متابعة") {
-      return "bg-[#fff1cc] text-[#8a6515]";
-    }
+      const matchesSearch =
+        !query ||
+        student.name.toLowerCase().includes(query) ||
+        student.specialization.toLowerCase().includes(query) ||
+        student.organization.toLowerCase().includes(query);
 
-    return "bg-[#eceff4] text-[#596273]";
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "late" && student.attendance < 85) ||
+        (filter === "regular" && student.attendance >= 85);
+
+      return matchesSearch && matchesFilter;
+    });
+
+    data = [...data].sort((a, b) => {
+      if (sort === "name") {
+        return a.name.localeCompare(b.name, "ar");
+      }
+
+      if (sort === "progress") {
+        return b.progress - a.progress;
+      }
+
+      return b.attendance - a.attendance;
+    });
+
+    return data;
+  }, [search, filter, sort]);
+
+  const toggleSidebar = () => {
+    window.dispatchEvent(
+      new Event("toggle-student-sidebar")
+    );
+  };
+
+  const exportCSV = () => {
+    const rows = [
+      [
+        "الطالب",
+        "التخصص",
+        "جهة التدريب",
+        "التقدم",
+        "الحضور",
+        "الحالة",
+      ],
+      ...filtered.map((student) => [
+        student.name,
+        student.specialization,
+        student.organization,
+        `${student.progress}%`,
+        `${student.attendance}%`,
+        student.status === "completed"
+          ? "منتهٍ"
+          : "قيد التدريب",
+      ]),
+    ];
+
+    const csv = rows
+      .map((row) =>
+        row
+          .map((value) => `"${value}"`)
+          .join(",")
+      )
+      .join("\r\n");
+
+    const blob = new Blob(["\uFEFF", csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "active-training-students.csv";
+    link.click();
+
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-white">
-      <Header />
+    <div
+      dir="rtl"
+      className="
+        flex
+        h-screen
+        w-full
+        overflow-hidden
+        bg-[#F8FAFC]
+        font-['Cairo']
+        text-[#111C2D]
+      "
+    >
+      <Sidebar />
 
-      <div className="flex">
-        <Sidebar />
+      <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
+        {/* HEADER */}
 
-        <main className="flex-1 min-w-0 px-[24px] pt-[14px] pb-[20px]">
-          {/* ================= PAGE HEADER ================= */}
-          <div className="flex items-start justify-between mb-[10px]">
-            <div>
-              <div className="flex items-center gap-[6px] text-[11px] text-[#7a8393] mb-[2px]">
-                <span>الرئيسية</span>
-                <span>›</span>
-                <span>الزيارات والمتابعة</span>
+        <AdminHeader />
+
+        {/* CONTENT */}
+
+        <main
+          className="
+            min-w-0
+            flex-1
+            overflow-x-hidden
+            overflow-y-auto
+            px-4
+            py-5
+            sm:px-6
+            lg:px-8
+          "
+        >
+          <div className="mx-auto w-full max-w-[1450px]">
+            {/* BREADCRUMB */}
+
+            <div className="mb-5 flex items-center gap-2 text-[12px] text-[#64748B]">
+              <button
+                type="button"
+                onClick={() =>
+                  navigate("/admin/dashboard")
+                }
+              >
+                الرئيسية
+              </button>
+
+              <ChevronLeft size={15} />
+
+              <span className="font-bold text-[#111C2D]">
+                الطلاب قيد التدريب
+              </span>
+            </div>
+
+            {/* TITLE */}
+
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h1 className="m-0 text-[26px] font-bold">
+                  الطلاب قيد التدريب
+                </h1>
+
+                <p className="m-0 mt-1 text-[13px] text-[#64748B]">
+                  الطلاب النشطون خلال الفترة الحالية
+                </p>
               </div>
 
-              <h1 className="text-[23px] font-bold text-[#1b2430]">
-                الزيارات والمتابعة
-              </h1>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigate("/admin/visits/add")}
-              className="
-                h-[34px]
-                px-[15px]
-                rounded-[7px]
-                bg-[#4b5568]
-                text-white
-                text-[11px]
-                font-semibold
-                hover:bg-[#3f4858]
-              "
-            >
-              + إضافة زيارة جديدة
-            </button>
-          </div>
-
-          {/* ================= STATS ================= */}
-          <section className="grid grid-cols-4 gap-[12px] mb-[10px]">
-            <StatCard
-              title="زيارات تتطلب متابعة"
-              value="28"
-              icon="!"
-            />
-
-            <StatCard
-              title="زيارات مكتملة"
-              value="96"
-              icon="✓"
-            />
-
-            <StatCard
-              title="زيارات هذا الأسبوع"
-              value="18"
-              icon="◷"
-            />
-
-            <StatCard
-              title="إجمالي الزيارات"
-              value="124"
-              icon="▣"
-            />
-          </section>
-
-          {/* ================= SEARCH + FILTERS ================= */}
-          <section
-            className="
-              border
-              border-[#dfe3ea]
-              rounded-[10px]
-              bg-white
-              px-[14px]
-              py-[10px]
-              mb-[10px]
-            "
-          >
-            <div
-              className="
-                h-[38px]
-                border
-                border-[#c9cfd9]
-                rounded-[8px]
-                flex
-                items-center
-                px-[12px]
-                gap-[8px]
-              "
-            >
-              <input
-                type="text"
-                placeholder="ابحث عن اسم الطالب أو المشرف أو الجهة ..."
+              <button
+                type="button"
+                onClick={exportCSV}
                 className="
-                  flex-1
-                  h-full
-                  outline-none
-                  bg-transparent
+                  flex
+                  h-[44px]
+                  items-center
+                  gap-2
+                  rounded-[8px]
+                  border
+                  border-[#E0E7F2]
+                  bg-white
+                  px-5
                   text-[12px]
-                  text-[#2b3340]
-                  placeholder:text-[#8a93a3]
                 "
-              />
-
-              <span className="text-[#8a93a3]">⌕</span>
+              >
+                <Download size={16} />
+                تصدير
+              </button>
             </div>
 
-            <div className="grid grid-cols-6 gap-[12px] mt-[10px]">
-              <Filter label="نوع الزيارة">
-                <option>الكل</option>
-                <option>زيارة ميدانية</option>
-                <option>متابعة دورية</option>
-              </Filter>
+            {/* SEARCH */}
 
-              <div>
-                <label className="block text-[11px] font-semibold text-[#3b4454] mb-[4px]">
-                  التاريخ
-                </label>
+            <div className="mb-6 flex flex-col gap-3 xl:flex-row">
+              <div className="relative flex-1">
+                <Search
+                  size={18}
+                  className="
+                    absolute
+                    right-4
+                    top-1/2
+                    -translate-y-1/2
+                    text-[#64748B]
+                  "
+                />
 
                 <input
-                  type="text"
-                  placeholder="من - إلى"
+                  value={search}
+                  onChange={(e) =>
+                    setSearch(e.target.value)
+                  }
+                  placeholder="ابحث عن طالب..."
                   className="
+                    h-[44px]
                     w-full
-                    h-[38px]
                     rounded-[8px]
                     border
-                    border-[#c9cfd9]
-                    px-[10px]
+                    border-[#E0E7F2]
+                    bg-white
+                    pr-11
+                    pl-4
+                    text-[13px]
                     outline-none
-                    text-[11px]
-                    text-[#4a5465]
-                    placeholder:text-[#8a93a3]
+                    focus:border-[#09379A]
                   "
                 />
               </div>
 
-              <Filter label="الطالب">
-                <option>كل الطلبة</option>
-                <option>أحمد خالد</option>
-                <option>سارة علي</option>
-                <option>محمد عادل</option>
-              </Filter>
-
-              <Filter label="المشرف">
-                <option>كل المشرفين</option>
-                <option>د. محمد علي</option>
-                <option>أ. ليلى حسن</option>
-                <option>د. محمد شريف</option>
-              </Filter>
-
-              <Filter label="الجهة التدريبية">
-                <option>كل الجهات</option>
-                <option>مستشفى القدس</option>
-                <option>شركة الاتصالات</option>
-                <option>مركز الإبداع الرقمي</option>
-              </Filter>
-
-              <Filter label="حالة المتابعة">
-                <option>الكل</option>
-                <option>مكتملة</option>
-                <option>تحتاج متابعة</option>
-                <option>مؤجلة</option>
-              </Filter>
-            </div>
-          </section>
-
-          {/* ================= MAIN CONTENT ================= */}
-          <div className="flex gap-[14px]">
-            {/* ================= VISIT DETAILS ================= */}
-            <aside className="w-[300px] shrink-0 grid gap-[10px] content-start">
-              <section
+              <button
+                type="button"
+                onClick={() =>
+                  setFilter((value) =>
+                    value === "all"
+                      ? "late"
+                      : value === "late"
+                      ? "regular"
+                      : "all"
+                  )
+                }
                 className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  px-[14px]
-                  py-[12px]
-                "
-              >
-                <h2 className="text-[15px] font-bold text-[#1f2733] mb-[10px]">
-                  تفاصيل الزيارة
-                </h2>
-
-                <div className="grid gap-[8px]">
-                  <DetailRow label="الطالب" value="أحمد خالد" />
-                  <DetailRow label="الرقم الجامعي" value="20231045" />
-                  <DetailRow label="المشرف" value="د. محمد علي" />
-                  <DetailRow label="جهة التدريب" value="مستشفى القدس" />
-                  <DetailRow label="نوع الزيارة" value="زيارة ميدانية" />
-                  <DetailRow label="تاريخ الزيارة" value="2025/04/20" />
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-[#7a8393]">
-                      الحالة
-                    </span>
-
-                    <span
-                      className="
-                        inline-flex
-                        px-[9px]
-                        py-[3px]
-                        rounded-full
-                        bg-[#dff1e6]
-                        text-[#236a45]
-                        text-[9px]
-                      "
-                    >
-                      مكتملة
-                    </span>
-                  </div>
-                </div>
-              </section>
-
-              {/* Notes */}
-              <section
-                className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  px-[14px]
-                  py-[12px]
-                "
-              >
-                <h2 className="text-[15px] font-bold text-[#1f2733] mb-[8px]">
-                  ملاحظات الزيارة
-                </h2>
-
-                <div
-                  className="
-                    border
-                    border-[#e1e5ec]
-                    rounded-[8px]
-                    bg-[#fbfcfd]
-                    px-[10px]
-                    py-[9px]
-                    text-[11px]
-                    leading-[1.8]
-                    text-[#4a5465]
-                  "
-                >
-                  تم متابعة أداء الطالب في المهام الموكلة إليه وظهر تقدمه
-                  جيداً في التعامل مع الأنظمة.
-                </div>
-              </section>
-
-              {/* Problems */}
-              <section
-                className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  px-[14px]
-                  py-[12px]
-                "
-              >
-                <h2 className="text-[15px] font-bold text-[#1f2733] mb-[8px]">
-                  المشاكل والإجراءات المطلوبة
-                </h2>
-
-                <div
-                  className="
-                    border
-                    border-[#e1e5ec]
-                    rounded-[8px]
-                    bg-[#fbfcfd]
-                    px-[10px]
-                    py-[9px]
-                    text-[11px]
-                    text-[#4a5465]
-                  "
-                >
-                  لا توجد مشاكل حالياً.
-                </div>
-              </section>
-
-              {/* Follow-up */}
-              <div
-                className="
-                  border
-                  border-[#e1e5ec]
+                  flex
+                  h-[44px]
+                  items-center
+                  gap-2
                   rounded-[8px]
-                  bg-[#fbfcfd]
-                  px-[11px]
-                  py-[9px]
-                  text-[10px]
-                  text-[#4a5465]
-                "
-              >
-                متابعة لاحقة · تاريخ المتابعة القادمة:{" "}
-                <strong className="text-[#1f2733]">
-                  2025/05/10
-                </strong>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-[6px]">
-                <ActionButton text="✎ تعديل" />
-                <ActionButton text="▣ تقرير الزيارة" />
-                <ActionButton text="➤ إرسال تنبيه" />
-              </div>
-            </aside>
-
-            {/* ================= VISITS TABLE ================= */}
-            <div className="flex-1 min-w-0">
-              <section
-                className="
                   border
-                  border-[#dfe3ea]
-                  rounded-[10px]
+                  border-[#E0E7F2]
                   bg-white
-                  overflow-hidden
+                  px-4
+                  text-[12px]
                 "
               >
-                <div className="flex items-center justify-between px-[14px] py-[10px]">
-                  <h2 className="text-[15px] font-bold text-[#1f2733]">
-                    قائمة الزيارات
-                  </h2>
+                <SlidersHorizontal size={17} />
+                تصفية
+              </button>
 
-                  <span className="text-[10px] text-[#667085]">
-                    عدد الصفوف: 20
-                  </span>
-                </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setSort((value) =>
+                    value === "name"
+                      ? "progress"
+                      : value === "progress"
+                      ? "attendance"
+                      : "name"
+                  )
+                }
+                className="
+                  flex
+                  h-[44px]
+                  items-center
+                  gap-2
+                  rounded-[8px]
+                  border
+                  border-[#E0E7F2]
+                  bg-white
+                  px-4
+                  text-[12px]
+                "
+              >
+                <ArrowDownUp size={17} />
+                ترتيب
+              </button>
+            </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right">
-                    <thead className="bg-[#f1f3f7]">
-                      <tr>
-                        {[
-                          "#",
-                          "الطالب",
-                          "المشرف",
-                          "جهة التدريب",
-                          "تاريخ الزيارة",
-                          "نوع الزيارة",
-                          "الحالة",
-                          "الإجراءات",
-                        ].map((heading) => (
-                          <th
-                            key={heading}
+            {/* FILTER CHIPS */}
+
+            <div className="mb-6 flex flex-wrap gap-2">
+              <FilterChip
+                active={filter === "all"}
+                onClick={() => setFilter("all")}
+              >
+                الكل 248
+              </FilterChip>
+
+              <FilterChip
+                active={filter === "late"}
+                onClick={() => setFilter("late")}
+              >
+                متأخر
+              </FilterChip>
+
+              <FilterChip
+                active={filter === "regular"}
+                onClick={() =>
+                  setFilter("regular")
+                }
+              >
+                منتظم
+              </FilterChip>
+            </div>
+
+            {/* TABLE */}
+
+            <section
+              className="
+                rounded-[12px]
+                border
+                border-[#E0E7F2]
+                bg-white
+                p-4
+                sm:p-6
+              "
+            >
+              <div className="overflow-x-auto rounded-[9px] border border-[#E0E7F2]">
+                <table className="w-full min-w-[900px] border-collapse text-right">
+                  <thead>
+                    <tr className="bg-[#F1F5F9] text-[11px] text-[#64748B]">
+                      <th className="px-4 py-4">
+                        الطالب
+                      </th>
+
+                      <th className="px-4 py-4">
+                        التخصص
+                      </th>
+
+                      <th className="px-4 py-4">
+                        جهة التدريب
+                      </th>
+
+                      <th className="px-4 py-4">
+                        التقدم
+                      </th>
+
+                      <th className="px-4 py-4">
+                        الحضور
+                      </th>
+
+                      <th className="px-4 py-4">
+                        الحالة
+                      </th>
+
+                      <th className="px-4 py-4">
+                        الإجراءات
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filtered.map((student) => (
+                      <tr
+                        key={student.id}
+                        className="
+                          border-t
+                          border-[#E6EBF5]
+                          text-[11px]
+                          hover:bg-[#FAFBFE]
+                        "
+                      >
+                        <td className="px-4 py-5 font-bold">
+                          {student.name}
+                        </td>
+
+                        <td className="px-4 py-5">
+                          {student.specialization}
+                        </td>
+
+                        <td className="px-4 py-5">
+                          {student.organization}
+                        </td>
+
+                        <td className="px-4 py-5">
+                          <Progress
+                            value={student.progress}
+                          />
+                        </td>
+
+                        <td className="px-4 py-5">
+                          {student.attendance}%
+                        </td>
+
+                        <td className="px-4 py-5">
+                          <Status
+                            completed={
+                              student.status ===
+                              "completed"
+                            }
+                          />
+                        </td>
+
+                        <td className="px-4 py-5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/admin/training-monitoring/${student.id}`
+                              )
+                            }
                             className="
-                              px-[9px]
-                              py-[8px]
+                              flex
+                              h-[32px]
+                              items-center
+                              gap-2
+                              rounded-[7px]
+                              border
+                              border-[#E0E7F2]
+                              bg-white
+                              px-3
                               text-[10px]
-                              font-semibold
-                              text-[#3b4454]
-                              border-b
-                              border-[#dfe3ea]
-                              whitespace-nowrap
                             "
                           >
-                            {heading}
-                          </th>
-                        ))}
+                            <Eye size={14} />
+                            التفاصيل
+                          </button>
+                        </td>
                       </tr>
-                    </thead>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-                    <tbody>
-                      {visits.map((visit) => (
-                        <tr
-                          key={visit.id}
-                          className="border-b border-[#eceff4] last:border-b-0"
-                        >
-                          <td className="px-[9px] py-[9px] text-[10px] text-[#667085]">
-                            {visit.id}
-                          </td>
+              <div
+                className="
+                  mt-4
+                  flex
+                  flex-col
+                  gap-3
+                  sm:flex-row
+                  sm:items-center
+                  sm:justify-between
+                "
+              >
+                <p className="m-0 text-[10px] text-[#64748B]">
+                  عرض 1 - 4 من 248 طالبًا
+                </p>
 
-                          <td className="px-[9px] py-[9px] text-[10px] font-semibold text-[#2b3340]">
-                            {visit.student}
-                          </td>
+                <div className="flex gap-2">
+                  <PageButton>
+                    السابق
+                  </PageButton>
 
-                          <td className="px-[9px] py-[9px] text-[10px] text-[#4a5465]">
-                            {visit.supervisor}
-                          </td>
-
-                          <td className="px-[9px] py-[9px] text-[10px] text-[#4a5465]">
-                            {visit.organization}
-                          </td>
-
-                          <td className="px-[9px] py-[9px] text-[10px] text-[#667085]">
-                            {visit.date}
-                          </td>
-
-                          <td className="px-[9px] py-[9px] text-[10px] text-[#4a5465]">
-                            {visit.type}
-                          </td>
-
-                          <td className="px-[9px] py-[9px]">
-                            <span
-                              className={`
-                                inline-flex
-                                px-[9px]
-                                py-[3px]
-                                rounded-full
-                                text-[9px]
-                                font-medium
-                                ${getStatusStyle(visit.status)}
-                              `}
-                            >
-                              {visit.status}
-                            </span>
-                          </td>
-
-                          <td className="px-[9px] py-[9px]">
-                            <button
-                              type="button"
-                              className="
-                                h-[27px]
-                                px-[10px]
-                                rounded-[6px]
-                                border
-                                border-[#b9c0cc]
-                                bg-white
-                                text-[9px]
-                                text-[#3b4454]
-                                hover:bg-[#eef0f4]
-                              "
-                            >
-                              عرض
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="flex justify-end gap-[5px] px-[14px] py-[10px]">
-                  {["‹", "1", "2", "3", "4", "5", "›"].map((page) => (
+                  {[1, 2, 3].map((item) => (
                     <button
-                      key={page}
-                      type="button"
+                      key={item}
+                      onClick={() => setPage(item)}
                       className={`
-                        min-w-[30px]
-                        h-[28px]
-                        rounded-[6px]
+                        h-[36px]
+                        min-w-[36px]
+                        rounded-full
                         border
-                        text-[10px]
+                        text-[11px]
+
                         ${
-                          page === "1"
-                            ? "bg-[#4b5568] border-[#4b5568] text-white"
-                            : "bg-white border-[#c9cfd9] text-[#4a5465]"
+                          page === item
+                            ? "border-[#09379A] bg-[#09379A] text-white"
+                            : "border-[#E0E7F2] bg-white"
                         }
                       `}
                     >
-                      {page}
+                      {item}
                     </button>
                   ))}
+
+                  <PageButton>
+                    التالي
+                  </PageButton>
                 </div>
-              </section>
-            </div>
+              </div>
+            </section>
+
+            <AcademicFooter audience="admin" />
           </div>
         </main>
       </div>
@@ -546,108 +533,98 @@ export default function Visits() {
   );
 }
 
-function StatCard({ title, value, icon }) {
+function Progress({ value }) {
   return (
-    <div
-      className="
-        border
-        border-[#dfe3ea]
-        rounded-[10px]
-        bg-white
-        px-[14px]
-        py-[10px]
-        flex
+    <div className="flex min-w-[150px] items-center gap-3">
+      <span className="text-[9px]">
+        {value}%
+      </span>
+
+      <div className="h-[7px] flex-1 overflow-hidden rounded-full bg-[#E5EAF2]">
+        <div
+          className="h-full rounded-full bg-[#09379A]"
+          style={{
+            width: `${value}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Status({ completed }) {
+  return (
+    <span
+      className={`
+        inline-flex
         items-center
-        justify-between
-      "
+        gap-1
+        rounded-full
+        px-3
+        py-1
+        text-[9px]
+        font-semibold
+
+        ${
+          completed
+            ? "bg-[#DCFCE7] text-[#15803D]"
+            : "bg-[#DDF6FF] text-[#08759B]"
+        }
+      `}
     >
-      <div>
-        <p className="text-[10px] text-[#667085] mb-[2px]">
-          {title}
-        </p>
+      <span className="h-[5px] w-[5px] rounded-full bg-current" />
 
-        <p className="text-[22px] font-bold text-[#1f2733]">
-          {value}
-        </p>
-      </div>
-
-      <div
-        className="
-          w-[38px]
-          h-[38px]
-          rounded-[10px]
-          bg-[#eceff4]
-          flex
-          items-center
-          justify-center
-          text-[#667085]
-        "
-      >
-        {icon}
-      </div>
-    </div>
+      {completed
+        ? "منتهٍ"
+        : "قيد التدريب"}
+    </span>
   );
 }
 
-function Filter({ label, children }) {
+function FilterChip({
+  active,
+  children,
+  onClick,
+}) {
   return (
-    <div>
-      <label className="block text-[11px] font-semibold text-[#3b4454] mb-[4px]">
-        {label}
-      </label>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`
+        h-[36px]
+        rounded-full
+        border
+        px-5
+        text-[11px]
 
-      <select
-        className="
-          w-full
-          h-[38px]
-          rounded-[8px]
-          border
-          border-[#c9cfd9]
-          bg-white
-          px-[10px]
-          outline-none
-          text-[11px]
-          text-[#4a5465]
-        "
-      >
-        {children}
-      </select>
-    </div>
+        ${
+          active
+            ? "border-[#09379A] bg-[#09379A] text-white"
+            : "border-[#E0E7F2] bg-white text-[#64748B]"
+        }
+      `}
+    >
+      {children}
+    </button>
   );
 }
 
-function DetailRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-[10px]">
-      <span className="text-[10px] text-[#7a8393]">
-        {label}
-      </span>
-
-      <span className="text-[10px] font-semibold text-[#2b3340] text-left">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function ActionButton({ text }) {
+function PageButton({ children }) {
   return (
     <button
       type="button"
       className="
-        flex-1
-        min-h-[30px]
-        px-[7px]
-        rounded-[6px]
+        h-[36px]
+        rounded-full
         border
-        border-[#b9c0cc]
+        border-[#E0E7F2]
         bg-white
-        text-[9px]
-        text-[#3b4454]
-        hover:bg-[#eef0f4]
+        px-4
+        text-[10px]
       "
     >
-      {text}
+      {children}
     </button>
   );
 }
+

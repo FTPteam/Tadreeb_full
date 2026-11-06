@@ -1,296 +1,929 @@
+import AcademicFooter from "../../components/shared/AcademicFooter";
+import { useNavigate } from "react-router-dom";
+
+import {
+  Clock3,
+  BriefcaseBusiness,
+  ClipboardList,
+  Compass,
+  ChevronLeft,
+  Code2,
+  BarChart3,
+  Network,
+  Bell,
+  BellOff,
+} from "lucide-react";
+
 import Header from "../../components/student/Header";
 import Sidebar from "../../components/student/Sidebar";
 
 export default function Dashboard() {
-  // =========================
-  // Statistics
-  // =========================
+  const navigate = useNavigate();
+
+  const currentYear = new Date().getFullYear();
+
   const statistics = [
     {
       title: "إجمالي الساعات",
       value: "120",
-      icon: "◷",
+      icon: Clock3,
     },
     {
       title: "تدريبي الحالي",
       value: "1",
-      icon: "□",
+      icon: BriefcaseBusiness,
     },
     {
       title: "طلباتي الحالية",
       value: "2",
-      icon: "▤",
+      icon: ClipboardList,
     },
     {
       title: "فرص تدريب متاحة",
       value: "12",
-      icon: "⌕",
+      icon: Compass,
     },
   ];
 
-  // =========================
-  // Training Opportunities
-  // =========================
   const opportunities = [
     {
       title: "تدريب في شركة التقنية الحديثة",
       field: "تقنية المعلومات",
       type: "حضوري",
+      icon: Code2,
+      iconBg: "#E5F8FC",
+      iconBorder: "#AAE7F2",
+      chipBg: "rgba(0, 180, 216, 0.15)",
+      chipDot: "#00B4D8",
     },
     {
       title: "تدريب في مركز فلسطين للتطوير",
-      field: "إدارة أعمال",
+      field: "التصميم الجرافيكي والفنون الرقمية",
       type: "عن بعد",
+      icon: BarChart3,
+      iconBg: "#FFF5E5",
+      iconBorder: "#FCD89B",
+      chipBg: "rgba(245, 158, 11, 0.15)",
+      chipDot: "#F59E0B",
     },
     {
-      title: "تدريب في مستشفى الشهيد الأزهر",
-      field: "خدمات طبية",
+      title: "تدريب في شركة حلول الشبكات",
+      field: "الاتصالات وإنترنت الأشياء",
       type: "حضوري",
+      icon: Network,
+      iconBg: "#E9FBF5",
+      iconBorder: "#AFE9D6",
+      chipBg: "rgba(16, 185, 129, 0.15)",
+      chipDot: "#10B981",
     },
   ];
 
-  // =========================
-  // Notifications
-  // =========================
   const notifications = [
     {
       title: "فتح باب التسجيل في دورات تدريبية جديدة",
       date: "2025/10/01",
+      unread: true,
     },
     {
       title: "إعلان عن فرص تدريب ميداني في عدة جهات",
       date: "2025/09/28",
+      unread: true,
     },
     {
       title: "تحديث سياسة التدريب الميداني",
       date: "2025/09/25",
+      unread: false,
     },
   ];
 
   return (
     <div
       dir="rtl"
-      className="min-h-screen bg-white"
+      className="
+        flex
+        h-dvh
+        w-full
+        overflow-hidden
+        bg-[#F8FAFC]
+        font-['Cairo']
+        text-[#1E293B]
+      "
     >
-      {/* ================= HEADER ================= */}
-      <Header />
+      {/* =====================================================
+          SIDEBAR
+      ====================================================== */}
+      <Sidebar />
 
-      {/* ================= PAGE BODY ================= */}
-      <div className="flex">
+      {/* =====================================================
+          MAIN SIDE
+      ====================================================== */}
+      <div
+        className="
+          flex
+          h-dvh
+          min-w-0
+          flex-1
+          flex-col
+          overflow-hidden
+          bg-[#F8FAFC]
+        "
+      >
+        {/* HEADER */}
+        <Header />
 
-        {/* ================= SIDEBAR ================= */}
-        <Sidebar />
+        {/* =====================================================
+            SCROLLABLE CONTENT
+        ====================================================== */}
+        <main
+          className="
+            min-h-0
+            flex-1
+            overflow-x-hidden
+            overflow-y-auto
+            bg-[#F8FAFC]
 
-        {/* ================= MAIN ================= */}
-        <main className="flex-1 px-[28px] pt-[18px] pb-8">
+            px-4
+            pb-6
+            pt-5
 
-          {/* ================= WELCOME ================= */}
-          <section className="h-[112px] rounded-[9px] bg-[#eef2f7] px-[28px] flex items-center justify-between mb-[14px]">
+            sm:px-5
+            sm:pt-6
 
-            <div>
-              <h1 className="text-[25px] font-bold text-[#293444] mb-2">
-                مرحبًا أمل
-              </h1>
+            md:px-6
+            md:pb-7
+            md:pt-7
 
-              <p className="text-[10px] text-[#8791a0]">
-                نتمنى لك رحلة تدريبية مليئة بالنجاح والتميز
-              </p>
-            </div>
+            xl:px-[40px]
+            xl:pb-[30px]
+            xl:pt-[32px]
+          "
+        >
+          <div className="mx-auto w-full max-w-[1080px]">
+            {/* =================================================
+                WELCOME BANNER
+            ================================================== */}
+            <section
+              className="
+                flex
+                w-full
+                min-h-[118px]
+                items-center
+                rounded-[14px]
+                bg-[#09379A]
+                px-5
+                py-5
+                text-white
 
-            {/* Graduation icon */}
-            <div className="text-[48px] text-[#9aa7b8]">
-              🎓
-            </div>
+                sm:min-h-[128px]
+                sm:px-6
 
-          </section>
+                md:min-h-[138px]
+                md:px-8
 
+                xl:h-[148px]
+                xl:px-[40px]
+                xl:py-0
+              "
+            >
+              <div className="w-full text-right">
+                <h1
+                  className="
+                    m-0
+                    text-[20px]
+                    font-bold
+                    leading-[29px]
+                    text-white
 
-          {/* ================= STATISTICS ================= */}
-          <section className="grid grid-cols-4 gap-[12px] mb-[13px]">
+                    sm:text-[22px]
+                    sm:leading-[30px]
 
-            {statistics.map((item) => (
-              <div
-                key={item.title}
-                className="h-[67px] rounded-[8px] border border-[#e0e3e7] bg-white px-[13px] flex items-center justify-between"
+                    xl:text-[24px]
+                  "
+                >
+                  مرحباً أمل
+                </h1>
+
+                <p
+                  className="
+                    m-0
+                    mt-[6px]
+                    max-w-[520px]
+                    text-[12px]
+                    font-medium
+                    leading-[20px]
+                    text-white/95
+
+                    sm:mt-[8px]
+                    sm:text-[13px]
+                    sm:leading-[21px]
+
+                    xl:text-[14px]
+                  "
+                >
+                  نتمنى لك رحلة تدريبية مليئة بالنجاح والتميز
+                </p>
+              </div>
+            </section>
+
+            {/* =================================================
+                STATISTICS
+            ================================================== */}
+            <section
+              className="
+                mt-4
+                grid
+                w-full
+                grid-cols-1
+                gap-3
+
+                min-[420px]:grid-cols-2
+
+                sm:mt-5
+                sm:gap-4
+
+                lg:grid-cols-4
+
+                xl:mt-[24px]
+                xl:gap-[24px]
+              "
+            >
+              {statistics.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <article
+                    key={item.title}
+                    className="
+                      flex
+                      min-h-[88px]
+                      min-w-0
+                      items-center
+                      rounded-[12px]
+                      border
+                      border-[#E2E8F0]
+                      bg-white
+                      px-4
+                      py-4
+                      shadow-[0_1px_1.5px_rgba(0,0,0,0.03)]
+
+                      sm:min-h-[92px]
+                      sm:px-[18px]
+
+                      xl:h-[93px]
+                      xl:px-[21px]
+                      xl:py-0
+                    "
+                  >
+                    <div
+                      className="
+                        flex
+                        h-[40px]
+                        w-[40px]
+                        shrink-0
+                        items-center
+                        justify-center
+                        rounded-[10px]
+                        border
+                        border-[#E2E8F0]/60
+                        bg-[#F8FAFC]
+                        text-[#09379A]
+                      "
+                    >
+                      <Icon size={22} strokeWidth={1.8} />
+                    </div>
+
+                    <div
+                      className="
+                        mr-3
+                        min-w-0
+                        flex-1
+                        text-right
+
+                        xl:mr-[16px]
+                      "
+                    >
+                      <p
+                        className="
+                          m-0
+                          text-[12px]
+                          font-medium
+                          leading-[18px]
+                          text-[#64748B]
+
+                          sm:text-[13px]
+
+                          xl:text-[14px]
+                          xl:whitespace-nowrap
+                        "
+                      >
+                        {item.title}
+                      </p>
+
+                      <p
+                        className="
+                          m-0
+                          mt-[2px]
+                          text-[21px]
+                          font-bold
+                          leading-[30px]
+                          text-[#1E293B]
+
+                          sm:text-[22px]
+
+                          xl:mt-[3px]
+                          xl:text-[24px]
+                          xl:leading-[32px]
+                        "
+                      >
+                        {item.value}
+                      </p>
+                    </div>
+                  </article>
+                );
+              })}
+            </section>
+
+            {/* =================================================
+                LOWER CARDS
+            ================================================== */}
+            <section
+              dir="ltr"
+              className="
+                mt-4
+                grid
+                w-full
+                grid-cols-1
+                items-start
+                gap-4
+
+                sm:mt-5
+
+                lg:grid-cols-[440fr_616fr]
+
+                xl:mt-[24px]
+                xl:gap-[24px]
+              "
+            >
+              {/* =================================================
+                  NOTIFICATIONS
+              ================================================== */}
+              <section
+                dir="rtl"
+                className="
+                  w-full
+                  min-w-0
+                  overflow-hidden
+                  rounded-[14px]
+                  border
+                  border-[#E2E8F0]
+                  bg-white
+                  px-4
+                  pt-4
+                  shadow-[0_1px_1.5px_rgba(0,0,0,0.03)]
+
+                  sm:px-5
+                  sm:pt-5
+
+                  lg:h-[376px]
+
+                  xl:px-[24px]
+                  xl:pt-[24px]
+                "
               >
+                <div
+                  className="
+                    flex
+                    min-h-[48px]
+                    items-start
+                    justify-between
+                    gap-3
+                    border-b
+                    border-[#E2E8F0]
+                    pb-3
 
-                {/* Text */}
-                <div className="text-right">
+                    sm:min-h-[52px]
+                  "
+                >
+                  <h2
+                    className="
+                      m-0
+                      min-w-0
+                      text-[16px]
+                      font-bold
+                      leading-[25px]
+                      text-[#1E293B]
 
-                  <p className="text-[9px] text-[#858e9b] mb-[2px]">
-                    {item.title}
-                  </p>
+                      sm:text-[17px]
 
-                  <p className="text-[20px] font-bold text-[#293444] leading-none">
-                    {item.value}
-                  </p>
+                      xl:text-[18px]
+                      xl:leading-[26px]
+                    "
+                  >
+                    آخر الإشعارات
+                  </h2>
 
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate("/student/notifications")
+                    }
+                    className="
+                      flex
+                      h-[34px]
+                      shrink-0
+                      items-center
+                      justify-center
+                      gap-[4px]
+                      rounded-[9px]
+                      border
+                      border-[#09379A]
+                      bg-white
+                      px-3
+                      text-[12px]
+                      font-normal
+                      text-[#09379A]
+                      transition
+                      hover:bg-[#F8FAFC]
+
+                      sm:h-[36px]
+                      sm:gap-[6px]
+                      sm:px-[14px]
+                      sm:text-[13px]
+
+                      xl:px-[16px]
+                      xl:text-[14px]
+                    "
+                  >
+                    <span>عرض الكل</span>
+
+                    <ChevronLeft
+                      size={15}
+                      strokeWidth={1.8}
+                    />
+                  </button>
                 </div>
 
-                {/* Icon */}
-                <div className="w-[30px] h-[30px] rounded-[7px] bg-[#eef2f7] flex items-center justify-center text-[#78869a] text-[15px]">
-                  {item.icon}
+                {notifications.length > 0 ? (
+                  <div>
+                    {notifications.map(
+                      (notification, index) => (
+                        <button
+                          type="button"
+                          key={notification.title}
+                          onClick={() =>
+                            navigate(
+                              "/student/notifications"
+                            )
+                          }
+                          className={`
+                            flex
+                            min-h-[70px]
+                            w-full
+                            items-center
+                            bg-white
+                            px-1
+                            py-3
+                            text-right
+                            transition
+                            hover:bg-[#F8FAFC]
+
+                            sm:min-h-[72px]
+                            sm:px-[8px]
+
+                            ${
+                              index !==
+                              notifications.length - 1
+                                ? "border-b border-[#E2E8F0]"
+                                : ""
+                            }
+                          `}
+                        >
+                          <div
+                            className="
+                              flex
+                              h-[32px]
+                              w-[32px]
+                              shrink-0
+                              items-center
+                              justify-center
+                              rounded-[8px]
+                              bg-[#EEF2F8]
+                              text-[#09379A]
+                            "
+                          >
+                            <Bell
+                              size={17}
+                              strokeWidth={1.7}
+                            />
+                          </div>
+
+                          <div
+                            className="
+                              mr-[10px]
+                              min-w-0
+                              flex-1
+
+                              sm:mr-[12px]
+                            "
+                          >
+                            <p
+                              className="
+                                m-0
+                                line-clamp-2
+                                text-[12px]
+                                font-semibold
+                                leading-[18px]
+                                text-[#1E293B]
+
+                                sm:text-[13px]
+                                sm:leading-[19px]
+
+                                md:truncate
+                              "
+                            >
+                              {notification.title}
+                            </p>
+
+                            <p
+                              dir="ltr"
+                              className="
+                                m-0
+                                mt-[2px]
+                                text-right
+                                text-[10px]
+                                font-normal
+                                leading-[14px]
+                                text-[#94A3B8]
+                              "
+                            >
+                              {notification.date}
+                            </p>
+                          </div>
+
+                          {notification.unread && (
+                            <span
+                              className="
+                                ml-[4px]
+                                h-[6px]
+                                w-[6px]
+                                shrink-0
+                                rounded-full
+                                bg-[#FF6B35]
+                              "
+                            />
+                          )}
+                        </button>
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className="
+                      flex
+                      min-h-[220px]
+                      flex-col
+                      items-center
+                      justify-center
+                      py-8
+                      text-center
+                      text-[#64748B]
+
+                      lg:h-[270px]
+                    "
+                  >
+                    <div
+                      className="
+                        mb-[12px]
+                        flex
+                        h-[44px]
+                        w-[44px]
+                        items-center
+                        justify-center
+                        rounded-[10px]
+                        bg-[#F8FAFC]
+                      "
+                    >
+                      <BellOff
+                        size={21}
+                        strokeWidth={1.7}
+                      />
+                    </div>
+
+                    <p
+                      className="
+                        m-0
+                        text-[13px]
+                        font-medium
+                        leading-[20px]
+                      "
+                    >
+                      لا توجد إشعارات جديدة حالياً
+                    </p>
+                  </div>
+                )}
+              </section>
+
+              {/* =================================================
+                  OPPORTUNITIES
+              ================================================== */}
+              <section
+                dir="rtl"
+                className="
+                  w-full
+                  min-w-0
+                  overflow-hidden
+                  rounded-[14px]
+                  border
+                  border-[#E2E8F0]
+                  bg-white
+                  px-4
+                  pt-4
+                  shadow-[0_1px_1.5px_rgba(0,0,0,0.03)]
+
+                  sm:px-5
+                  sm:pt-5
+
+                  lg:h-[376px]
+
+                  xl:px-[24px]
+                  xl:pt-[24px]
+                "
+              >
+                <div
+                  className="
+                    flex
+                    min-h-[48px]
+                    items-start
+                    justify-between
+                    gap-3
+                    border-b
+                    border-[#E2E8F0]
+                    pb-3
+
+                    sm:min-h-[52px]
+                  "
+                >
+                  <h2
+                    className="
+                      m-0
+                      min-w-0
+                      text-[16px]
+                      font-bold
+                      leading-[25px]
+                      text-[#1E293B]
+
+                      sm:text-[17px]
+
+                      xl:text-[18px]
+                      xl:leading-[26px]
+                    "
+                  >
+                    فرص تدريب مقترحة لك
+                  </h2>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate("/student/opportunities")
+                    }
+                    className="
+                      flex
+                      h-[34px]
+                      shrink-0
+                      items-center
+                      justify-center
+                      gap-[4px]
+                      rounded-[9px]
+                      border
+                      border-[#09379A]
+                      bg-white
+                      px-3
+                      text-[12px]
+                      font-normal
+                      text-[#09379A]
+                      transition
+                      hover:bg-[#F8FAFC]
+
+                      sm:h-[36px]
+                      sm:gap-[6px]
+                      sm:px-[14px]
+                      sm:text-[13px]
+
+                      xl:px-[16px]
+                      xl:text-[14px]
+                    "
+                  >
+                    <span>عرض الكل</span>
+
+                    <ChevronLeft
+                      size={15}
+                      strokeWidth={1.8}
+                    />
+                  </button>
                 </div>
 
-              </div>
-            ))}
+                <div>
+                  {opportunities.map(
+                    (opportunity, index) => {
+                      const Icon = opportunity.icon;
 
-          </section>
+                      return (
+                        <button
+                          type="button"
+                          key={opportunity.title}
+                          onClick={() =>
+                            navigate(
+                              "/student/opportunities/details"
+                            )
+                          }
+                          className={`
+                            flex
+                            min-h-[86px]
+                            w-full
+                            items-center
+                            rounded-[10px]
+                            bg-white
+                            px-1
+                            py-3
+                            text-right
+                            transition
+                            hover:bg-[#F8FAFC]
 
+                            sm:px-[8px]
 
-          {/* ================= TWO COLUMNS ================= */}
-          <section className="grid grid-cols-2 gap-[12px]">
+                            lg:h-[88px]
+                            lg:py-0
 
+                            ${
+                              index !==
+                              opportunities.length - 1
+                                ? "border-b border-[#E2E8F0]"
+                                : ""
+                            }
+                          `}
+                        >
+                          <div
+                            style={{
+                              backgroundColor:
+                                opportunity.iconBg,
+                              borderColor:
+                                opportunity.iconBorder,
+                            }}
+                            className="
+                              flex
+                              h-[44px]
+                              w-[44px]
+                              shrink-0
+                              items-center
+                              justify-center
+                              rounded-[10px]
+                              border
+                              text-[#09379A]
 
-            {/* ================================================= */}
-            {/* TRAINING OPPORTUNITIES */}
-            {/* ================================================= */}
+                              sm:h-[48px]
+                              sm:w-[48px]
+                            "
+                          >
+                            <Icon
+                              size={22}
+                              strokeWidth={1.8}
+                            />
+                          </div>
 
-            <div className="border border-[#e0e3e7] rounded-[8px] bg-white overflow-hidden">
+                          <div
+                            className="
+                              mr-3
+                              min-w-0
+                              flex-1
 
-              {/* Card Header */}
-              <div className="h-[51px] px-[14px] flex items-center justify-between border-b border-[#eceef1]">
+                              sm:mr-[14px]
+                            "
+                          >
+                            <h3
+                              className="
+                                m-0
+                                line-clamp-2
+                                text-[14px]
+                                font-semibold
+                                leading-[21px]
+                                text-[#1E293B]
 
-                <h2 className="text-[13px] font-bold text-[#293444]">
-                  فرص تدريب مقترحة لك
-                </h2>
+                                sm:text-[15px]
+                                sm:leading-[22px]
 
-                <button
-                  type="button"
-                  className="h-[27px] px-[12px] border border-[#cbd1d8] rounded-[5px] bg-white text-[9px] text-[#4d5968] hover:bg-[#f7f8fa] transition"
-                >
-                  عرض الكل
-                </button>
+                                md:truncate
 
-              </div>
+                                xl:text-[16px]
+                                xl:leading-[23px]
+                              "
+                            >
+                              {opportunity.title}
+                            </h3>
 
+                            <div
+                              className="
+                                mt-[5px]
+                                flex
+                                flex-wrap
+                                items-center
+                                gap-[6px]
 
-              {/* Opportunities */}
-              <div className="px-[12px]">
+                                sm:gap-[8px]
+                              "
+                            >
+                              <span
+                                style={{
+                                  backgroundColor:
+                                    opportunity.chipBg,
+                                }}
+                                className="
+                                  flex
+                                  min-h-[23px]
+                                  items-center
+                                  gap-[5px]
+                                  rounded-[9px]
+                                  px-2
+                                  text-[10px]
+                                  leading-[17px]
+                                  text-[#1E293B]
 
-                {opportunities.map((opportunity, index) => (
-                  <div
-                    key={opportunity.title}
-                    className={`
-                      min-h-[55px]
-                      flex
-                      items-center
-                      gap-3
-                      ${
-                        index !== opportunities.length - 1
-                          ? "border-b border-[#edf0f2]"
-                          : ""
-                      }
-                    `}
-                  >
+                                  sm:h-[24px]
+                                  sm:px-[10px]
+                                  sm:text-[11px]
 
-                    {/* Company Icon */}
-                    <div className="w-[40px] h-[40px] shrink-0 rounded-[7px] bg-[#e9eef5] flex items-center justify-center text-[#78869a]">
-                      ▥
-                    </div>
+                                  xl:text-[12px]
+                                  xl:leading-[18px]
+                                "
+                              >
+                                <span
+                                  style={{
+                                    backgroundColor:
+                                      opportunity.chipDot,
+                                  }}
+                                  className="
+                                    h-[5px]
+                                    w-[5px]
+                                    shrink-0
+                                    rounded-full
+                                  "
+                                />
 
+                                {opportunity.field}
+                              </span>
 
-                    {/* Content */}
-                    <div className="flex-1 text-right">
+                              <span
+                                className="
+                                  flex
+                                  min-h-[23px]
+                                  items-center
+                                  rounded-[9px]
+                                  border
+                                  border-[#E2E8F0]
+                                  bg-white
+                                  px-2
+                                  text-[10px]
+                                  leading-[17px]
+                                  text-[#64748B]
 
-                      <h3 className="text-[10px] font-bold text-[#303846] mb-[5px]">
-                        {opportunity.title}
-                      </h3>
+                                  sm:h-[24px]
+                                  sm:px-[10px]
+                                  sm:text-[11px]
 
-                      <div className="flex items-center gap-1">
+                                  xl:text-[12px]
+                                  xl:leading-[18px]
+                                "
+                              >
+                                {opportunity.type}
+                              </span>
+                            </div>
+                          </div>
 
-                        <span className="px-[8px] py-[2px] rounded-full bg-[#eef1f5] text-[#697386] text-[8px]">
-                          {opportunity.field}
-                        </span>
+                          <ChevronLeft
+                            size={18}
+                            strokeWidth={1.8}
+                            className="
+                              mr-1
+                              shrink-0
+                              text-[#94A3B8]
 
-                        <span className="px-[8px] py-[2px] rounded-full bg-[#eef1f5] text-[#697386] text-[8px]">
-                          {opportunity.type}
-                        </span>
+                              sm:mr-[8px]
+                              sm:size-[20px]
+                            "
+                          />
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+              </section>
+            </section>
 
-                      </div>
-
-                    </div>
-
-                  </div>
-                ))}
-
-              </div>
-
-            </div>
-
-
-            {/* ================================================= */}
-            {/* NOTIFICATIONS */}
-            {/* ================================================= */}
-
-            <div className="border border-[#e0e3e7] rounded-[8px] bg-white overflow-hidden">
-
-              {/* Card Header */}
-              <div className="h-[51px] px-[14px] flex items-center justify-between border-b border-[#eceef1]">
-
-                <h2 className="text-[13px] font-bold text-[#293444]">
-                  آخر الإشعارات
-                </h2>
-
-                <button
-                  type="button"
-                  className="h-[27px] px-[12px] border border-[#cbd1d8] rounded-[5px] bg-white text-[9px] text-[#4d5968] hover:bg-[#f7f8fa] transition"
-                >
-                  عرض الكل
-                </button>
-
-              </div>
-
-
-              {/* Notifications */}
-              <div className="px-[12px]">
-
-                {notifications.map((notification, index) => (
-                  <div
-                    key={notification.title}
-                    className={`
-                      min-h-[55px]
-                      flex
-                      items-center
-                      gap-2
-                      ${
-                        index !== notifications.length - 1
-                          ? "border-b border-[#edf0f2]"
-                          : ""
-                      }
-                    `}
-                  >
-
-                    {/* Notification Icon */}
-                    <div className="text-[#9aa3ae] text-[13px]">
-                      ♧
-                    </div>
-
-
-                    {/* Notification Content */}
-                    <div className="flex-1 text-right">
-
-                      <p className="text-[10px] text-[#303846] font-medium">
-                        {notification.title}
-                      </p>
-
-                      <p className="text-[8px] text-[#9aa3ae] mt-[3px]">
-                        {notification.date}
-                      </p>
-
-                    </div>
-
-                  </div>
-                ))}
-
-              </div>
-
-            </div>
-
-          </section>
-
+            {/* =================================================
+                FOOTER
+            ================================================== */}
+            <AcademicFooter audience="student" />
+          </div>
         </main>
-
       </div>
     </div>
   );
