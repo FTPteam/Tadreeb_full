@@ -1,320 +1,394 @@
+import AcademicFooter from "../../components/shared/AcademicFooter";
+import AdminHeader from "../../components/admin/Header";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import Header from "../../components/admin/Header";
+import {
+  Bell,
+  Menu,
+  ChevronLeft,
+  ArrowRight,
+  Save,
+} from "lucide-react";
+
 import Sidebar from "../../components/admin/Sidebar";
+
+const CRITERIA = [
+  {
+    id: "technical",
+    title: "المهارات الفنية والتطبيقية",
+  },
+  {
+    id: "discipline",
+    title: "الالتزام والانضباط",
+  },
+  {
+    id: "communication",
+    title: "التواصل والعمل الجماعي",
+  },
+  {
+    id: "innovation",
+    title: "الابتكار وحل المشكلات",
+  },
+];
 
 export default function StudentEvaluation() {
   const navigate = useNavigate();
 
-  const [academicRatings, setAcademicRatings] = useState({
-    commitment: 5,
-    benefit: 4,
-    development: 4,
-    reports: 5,
-    goals: 4,
-  });
-
-  const [organizationRatings, setOrganizationRatings] = useState({
-    attendance: 5,
-    punctuality: 4,
-    tasks: 5,
+  const [scores, setScores] = useState({
     technical: 4,
+    discipline: 5,
     communication: 4,
-    teamwork: 5,
-    responsibility: 4,
+    innovation: null,
   });
 
-  const [notes, setNotes] = useState(
-    "مستوى الطالب جيد جداً، وأظهر تطوراً واضحاً خلال فترة التدريب."
-  );
+  const [notes, setNotes] = useState("");
 
-  const handleAcademicChange = (name, value) => {
-    setAcademicRatings((prev) => ({
-      ...prev,
-      [name]: Number(value),
-    }));
+  const toggleSidebar = () => {
+    window.dispatchEvent(
+      new Event("toggle-student-sidebar")
+    );
   };
 
-  const handleOrganizationChange = (name, value) => {
-    setOrganizationRatings((prev) => ({
-      ...prev,
-      [name]: Number(value),
-    }));
-  };
-
-  const handleSubmit = () => {
+  const handleSave = () => {
     navigate("/admin/evaluations");
   };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-white">
-      <Header />
+    <div
+      dir="rtl"
+      className="
+        flex
+        h-screen
+        w-full
+        overflow-hidden
+        bg-[#F8FAFC]
+        font-['Cairo']
+        text-[#111C2D]
+      "
+    >
+      <Sidebar />
 
-      <div className="flex">
-        <Sidebar />
+      <div
+        className="
+          flex
+          h-screen
+          min-w-0
+          flex-1
+          flex-col
+          overflow-hidden
+        "
+      >
+        <AdminHeader />
 
-        <main className="flex-1 min-w-0 px-[24px] pt-[14px] pb-[20px]">
-          {/* ================= PAGE HEADER ================= */}
-          <div className="flex items-center justify-between mb-[10px]">
-            <div>
-              <div className="flex items-center gap-[6px] text-[11px] text-[#7a8393] mb-[2px]">
-                <span>الرئيسية</span>
-                <span>›</span>
+        <main
+          className="
+            min-w-0
+            flex-1
+            overflow-x-hidden
+            overflow-y-auto
+            px-4
+            pb-7
+            pt-5
+            sm:px-6
+            lg:px-8
+          "
+        >
+          <div className="mx-auto w-full max-w-[1450px]">
+            {/* BREADCRUMB */}
 
-                <span
-                  onClick={() => navigate("/admin/evaluations")}
-                  className="cursor-pointer hover:text-[#4b5568]"
-                >
-                  التقييمات
-                </span>
-
-                <span>›</span>
-                <span>تقييم الطالب</span>
-              </div>
-
-              <h1 className="text-[23px] font-bold text-[#1b2430]">
-                تقييم الطالب
-              </h1>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigate("/admin/evaluations")}
+            <div
               className="
-                h-[30px]
-                px-[12px]
-                rounded-[6px]
-                border
-                border-[#b9c0cc]
-                bg-white
-                text-[10px]
-                text-[#3b4454]
-                hover:bg-[#eef0f4]
+                mb-8
+                flex
+                items-center
+                gap-2
+                text-[12px]
+                text-[#64748B]
               "
             >
-              رجوع ←
-            </button>
-          </div>
-
-          {/* ================= STUDENT DATA ================= */}
-          <Section title="بيانات الطالب">
-            <div className="grid grid-cols-3 gap-[8px]">
-              <InfoBox label="اسم الطالب" value="أحمد خالد" />
-              <InfoBox label="الرقم الجامعي" value="20231045" />
-              <InfoBox label="التخصص" value="هندسة برمجيات" />
-
-              <InfoBox label="جهة التدريب" value="شركة التقنية" />
-              <InfoBox label="فرصة التدريب" value="مطور برمجيات" />
-              <InfoBox
-                label="فترة التدريب"
-                value="2025/06/01 - 2025/08/30"
-              />
-            </div>
-          </Section>
-
-          {/* ================= EVALUATIONS ================= */}
-          <div className="grid grid-cols-2 gap-[10px] mb-[10px] items-start">
-            {/* Academic Supervisor */}
-            <div className="grid gap-[10px]">
-              <section
-                className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  overflow-hidden
-                "
+              <button
+                onClick={() =>
+                  navigate("/admin/dashboard")
+                }
               >
-                <div className="px-[14px] py-[10px] border-b border-[#eceff4]">
-                  <h2 className="text-[15px] font-bold text-[#1f2733]">
-                    تقييم المشرف الأكاديمي
-                  </h2>
-                </div>
+                الرئيسية
+              </button>
 
-                <RatingTable
-                  rows={[
-                    ["مستوى الالتزام", "commitment", academicRatings.commitment],
-                    ["الاستفادة من التدريب", "benefit", academicRatings.benefit],
-                    [
-                      "التطور خلال فترة التدريب",
-                      "development",
-                      academicRatings.development,
-                    ],
-                    ["جودة التقارير", "reports", academicRatings.reports],
-                    ["تحقيق أهداف التدريب", "goals", academicRatings.goals],
-                  ]}
-                  onChange={handleAcademicChange}
-                />
-              </section>
+              <ChevronLeft size={15} />
 
-              {/* Final Result */}
-              <section
-                className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  px-[14px]
-                  py-[12px]
-                "
-              >
-                <h2 className="text-[15px] font-bold text-[#1f2733] mb-[10px]">
-                  النتيجة النهائية
-                </h2>
-
-                <div className="grid grid-cols-3 gap-[8px]">
-                  <InfoBox
-                    label="متوسط تقييم جهة التدريب"
-                    value="4.5 / 5"
-                  />
-
-                  <InfoBox
-                    label="متوسط تقييم المشرف"
-                    value="4.2 / 5"
-                  />
-
-                  <InfoBox
-                    label="الدرجة النهائية"
-                    value="87%"
-                    strong
-                  />
-                </div>
-              </section>
+              <span className="font-bold text-[#111C2D]">
+                إضافة تقييم
+              </span>
             </div>
 
-            {/* Organization Evaluation */}
+            {/* PAGE HEADER */}
+
             <section
               className="
-                border
-                border-[#dfe3ea]
-                rounded-[10px]
-                bg-white
-                overflow-hidden
+                mb-6
+                flex
+                items-start
+                justify-between
               "
             >
-              <div className="px-[14px] py-[10px] border-b border-[#eceff4]">
-                <h2 className="text-[15px] font-bold text-[#1f2733]">
-                  تقييم جهة التدريب
-                </h2>
+              <div>
+                <h1
+                  className="
+                    m-0
+                    text-[26px]
+                    font-bold
+                    text-[#111C2D]
+                  "
+                >
+                  إضافة تقييم
+                </h1>
+
+                <p className="m-0 mt-1 text-[13px] text-[#64748B]">
+                  تقييم المشرف الأكاديمي - أمل أحمد صيام
+                </p>
               </div>
 
-              <RatingTable
-                rows={[
-                  [
-                    "الالتزام بالحضور",
-                    "attendance",
-                    organizationRatings.attendance,
-                  ],
-                  [
-                    "الالتزام بالمواعيد",
-                    "punctuality",
-                    organizationRatings.punctuality,
-                  ],
-                  ["أداء المهام", "tasks", organizationRatings.tasks],
-                  [
-                    "المهارات الفنية",
-                    "technical",
-                    organizationRatings.technical,
-                  ],
-                  [
-                    "التواصل",
-                    "communication",
-                    organizationRatings.communication,
-                  ],
-                  [
-                    "العمل الجماعي",
-                    "teamwork",
-                    organizationRatings.teamwork,
-                  ],
-                  [
-                    "تحمل المسؤولية",
-                    "responsibility",
-                    organizationRatings.responsibility,
-                  ],
-                ]}
-                onChange={handleOrganizationChange}
-              />
+              <button
+                onClick={() =>
+                  navigate("/admin/evaluations")
+                }
+                className="
+                  flex
+                  h-[44px]
+                  items-center
+                  gap-2
+                  rounded-[8px]
+                  border
+                  border-[#E0E7F2]
+                  bg-white
+                  px-5
+                  text-[11px]
+                "
+              >
+                <ArrowRight size={16} />
+                رجوع
+              </button>
             </section>
-          </div>
 
-          {/* ================= GENERAL NOTES ================= */}
-          <Section title="ملاحظات عامة">
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+            <div
               className="
-                w-full
-                min-h-[105px]
-                resize-none
-                rounded-[8px]
-                border
-                border-[#c9cfd9]
-                bg-white
-                px-[12px]
-                py-[10px]
-                outline-none
-                text-[11px]
-                leading-[1.8]
-                text-[#2b3340]
-                focus:border-[#8a93a3]
-              "
-            />
-          </Section>
-
-          {/* ================= ACTIONS ================= */}
-          <div className="flex justify-end gap-[10px] mt-[10px]">
-            <button
-              type="button"
-              onClick={handleSubmit}
-              className="
-                h-[34px]
-                px-[16px]
-                rounded-[7px]
-                bg-[#4b5568]
-                text-white
-                text-[11px]
-                font-semibold
-                hover:bg-[#3f4858]
+                grid
+                grid-cols-1
+                gap-6
+                xl:grid-cols-[minmax(0,1.65fr)_400px]
               "
             >
-              إرسال التقييم
-            </button>
+              {/* CRITERIA */}
 
-            <button
-              type="button"
-              className="
-                h-[34px]
-                px-[16px]
-                rounded-[7px]
-                border
-                border-[#b9c0cc]
-                bg-white
-                text-[11px]
-                text-[#3b4454]
-                hover:bg-[#eef0f4]
-              "
-            >
-              ✓ حفظ كمسودة
-            </button>
+              <section
+                className="
+                  rounded-[12px]
+                  border
+                  border-[#E0E7F2]
+                  bg-white
+                  p-6
+                "
+              >
+                <h2
+                  className="
+                    m-0
+                    border-b
+                    border-[#E6EBF5]
+                    pb-4
+                    text-[17px]
+                    font-bold
+                    text-[#062569]
+                  "
+                >
+                  معايير التقييم (1-5)
+                </h2>
 
-            <button
-              type="button"
-              onClick={() => navigate("/admin/evaluations")}
-              className="
-                h-[34px]
-                px-[16px]
-                rounded-[7px]
-                border
-                border-[#b9c0cc]
-                bg-white
-                text-[11px]
-                text-[#3b4454]
-                hover:bg-[#eef0f4]
-              "
-            >
-              إلغاء
-            </button>
+                <div>
+                  {CRITERIA.map((criterion) => (
+                    <div
+                      key={criterion.id}
+                      className="
+                        flex
+                        min-h-[76px]
+                        flex-col
+                        justify-center
+                        gap-3
+                        border-b
+                        border-[#E6EBF5]
+                        py-3
+                        last:border-b-0
+                        md:flex-row
+                        md:items-center
+                        md:justify-between
+                      "
+                    >
+                      <span className="text-[12px] font-bold">
+                        {criterion.title}
+                      </span>
+
+                      <div
+                        dir="ltr"
+                        className="flex gap-2"
+                      >
+                        {[5, 4, 3, 2, 1].map(
+                          (number) => (
+                            <button
+                              key={number}
+                              type="button"
+                              onClick={() =>
+                                setScores(
+                                  (previous) => ({
+                                    ...previous,
+                                    [criterion.id]:
+                                      number,
+                                  })
+                                )
+                              }
+                              className={`
+                                h-[44px]
+                                w-[44px]
+                                rounded-[7px]
+                                border
+                                text-[12px]
+                                font-medium
+
+                                ${
+                                  scores[
+                                    criterion.id
+                                  ] === number
+                                    ? `
+                                        border-[#09379A]
+                                        bg-[#09379A]
+                                        text-white
+                                      `
+                                    : `
+                                        border-[#E0E7F2]
+                                        bg-white
+                                        text-[#1E293B]
+                                      `
+                                }
+                              `}
+                            >
+                              {number}
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* NOTES */}
+
+              <section
+                className="
+                  h-fit
+                  rounded-[12px]
+                  border
+                  border-[#E0E7F2]
+                  bg-white
+                  p-6
+                "
+              >
+                <h2
+                  className="
+                    m-0
+                    border-b
+                    border-[#E6EBF5]
+                    pb-4
+                    text-[17px]
+                    font-bold
+                    text-[#062569]
+                  "
+                >
+                  الملاحظات
+                </h2>
+
+                <label
+                  className="
+                    mb-2
+                    mt-4
+                    block
+                    text-[11px]
+                    font-medium
+                  "
+                >
+                  ملاحظات وتوصيات
+                </label>
+
+                <textarea
+                  rows={5}
+                  value={notes}
+                  onChange={(event) =>
+                    setNotes(event.target.value)
+                  }
+                  placeholder="اكتب ملاحظاتك..."
+                  className="
+                    w-full
+                    resize-none
+                    rounded-[8px]
+                    border
+                    border-[#E0E7F2]
+                    p-3
+                    text-[12px]
+                    outline-none
+                    focus:border-[#09379A]
+                  "
+                />
+
+                <div
+                  className="
+                    mt-4
+                    flex
+                    items-center
+                    justify-between
+                    gap-3
+                  "
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate("/admin/evaluations")
+                    }
+                    className="
+                      h-[44px]
+                      rounded-[8px]
+                      border
+                      border-[#E0E7F2]
+                      bg-white
+                      px-5
+                      text-[11px]
+                    "
+                  >
+                    إلغاء
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    className="
+                      flex
+                      h-[44px]
+                      items-center
+                      gap-2
+                      rounded-[8px]
+                      bg-[#09379A]
+                      px-5
+                      text-[11px]
+                      font-bold
+                      text-white
+                    "
+                  >
+                    <Save size={16} />
+                    حفظ التقييم
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <AcademicFooter audience="admin" />
           </div>
         </main>
       </div>
@@ -322,130 +396,3 @@ export default function StudentEvaluation() {
   );
 }
 
-function Section({ title, children }) {
-  return (
-    <section
-      className="
-        border
-        border-[#dfe3ea]
-        rounded-[10px]
-        bg-white
-        px-[14px]
-        py-[12px]
-        mb-[10px]
-      "
-    >
-      <h2 className="text-[15px] font-bold text-[#1f2733] mb-[10px]">
-        {title}
-      </h2>
-
-      {children}
-    </section>
-  );
-}
-
-function InfoBox({ label, value, strong = false }) {
-  return (
-    <div
-      className="
-        border
-        border-[#e1e5ec]
-        rounded-[8px]
-        bg-[#fbfcfd]
-        px-[11px]
-        py-[8px]
-      "
-    >
-      <p className="text-[9px] text-[#7a8393] mb-[2px]">
-        {label}
-      </p>
-
-      <p
-        className={`
-          text-[10px]
-          text-[#2b3340]
-          ${strong ? "font-bold text-[13px]" : "font-semibold"}
-        `}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function RatingTable({ rows, onChange }) {
-  return (
-    <table className="w-full text-right">
-      <thead className="bg-[#f1f3f7]">
-        <tr>
-          <th
-            className="
-              px-[12px]
-              py-[8px]
-              text-[10px]
-              font-semibold
-              text-[#3b4454]
-              border-b
-              border-[#dfe3ea]
-            "
-          >
-            المعيار
-          </th>
-
-          <th
-            className="
-              px-[12px]
-              py-[8px]
-              text-[10px]
-              font-semibold
-              text-[#3b4454]
-              border-b
-              border-[#dfe3ea]
-              w-[130px]
-            "
-          >
-            التقييم (من 5)
-          </th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {rows.map(([label, name, value]) => (
-          <tr
-            key={name}
-            className="border-b border-[#eceff4] last:border-b-0"
-          >
-            <td className="px-[12px] py-[9px] text-[10px] text-[#2b3340]">
-              {label}
-            </td>
-
-            <td className="px-[12px] py-[7px]">
-              <select
-                value={value}
-                onChange={(e) => onChange(name, e.target.value)}
-                className="
-                  w-[90px]
-                  h-[31px]
-                  rounded-[6px]
-                  border
-                  border-[#c9cfd9]
-                  bg-white
-                  px-[8px]
-                  outline-none
-                  text-[10px]
-                  text-[#3b4454]
-                "
-              >
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-              </select>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}

@@ -1,473 +1,845 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function UserIcon() {
-  return (
-    <svg
-      className="w-4 h-4 text-slate-400"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-    >
-      <circle cx="12" cy="8" r="3.5" />
-      <path d="M5 21c.7-4 3-6 7-6s6.3 2 7 6" />
-    </svg>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg
-      className="w-4 h-4 text-slate-400"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-    >
-      <path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z" />
-      <circle cx="12" cy="12" r="2.3" />
-    </svg>
-  );
-}
-
-function GraduationIcon() {
-  return (
-    <svg
-      className="w-11 h-11 text-slate-600"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-    >
-      <path d="M3 9.5 12 4l9 5.5-9 5-9-5Z" />
-      <path d="M6 11.5V16c3 2.2 9 2.2 12 0v-4.5" />
-      <path d="M21 10v5" />
-    </svg>
-  );
-}
-
-function UserFeatureIcon() {
-  return (
-    <svg
-      className="w-5 h-5 text-slate-600"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-    >
-      <circle cx="12" cy="7" r="3" />
-      <path d="M5 21c.6-4.2 3-6.5 7-6.5s6.4 2.3 7 6.5" />
-    </svg>
-  );
-}
-
-function FolderIcon() {
-  return (
-    <svg
-      className="w-5 h-5 text-slate-600"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-    >
-      <path d="M3 6.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5Z" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      className="w-5 h-5 text-slate-600"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-    >
-      <path d="m5 12 4 4L19 6" />
-    </svg>
-  );
-}
-
-function UniversityIcon() {
-  return (
-    <svg
-      className="w-3.5 h-3.5 text-slate-600"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-    >
-      <path d="M3 9 12 4l9 5-9 5-9-5Z" />
-      <path d="M6 11v5m12-5v5M4 18h16" />
-    </svg>
-  );
-}
+import {
+  ArrowLeft,
+  BriefcaseBusiness,
+  Check,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Star,
+  UserRound,
+} from "lucide-react";
 
 export default function Login() {
-  const [rememberMe, setRememberMe] = useState(false);
-
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
-    navigate("/dashboard");
+  const [formData, setFormData] = useState({
+    studentId: "20220845",
+    password: "123456789012",
+  });
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    navigate("/student/dashboard");
   };
 
   return (
     <div
-      dir="rtl"
-      className="min-h-screen w-full bg-white"
+      dir="ltr"
+      className="
+        min-h-dvh
+        w-full
+        bg-[#F8FAFC]
+        font-['Cairo']
+        text-[#1E293B]
+      "
     >
-      <div className="w-full min-h-screen grid grid-cols-1 lg:grid-cols-[54%_46%]">
+      <div
+        className="
+          min-h-dvh
+          w-full
 
+          lg:grid
+          lg:h-dvh
+          lg:min-h-0
+          lg:grid-cols-2
+          lg:overflow-hidden
+        "
+      >
         {/* =====================================================
-            LOGIN - LEFT
+            LEFT / BRAND SIDE - DESKTOP
         ====================================================== */}
+
         <section
+          dir="rtl"
           className="
-            min-h-screen
-            bg-white
-            flex
-            items-center
-            justify-center
-            px-6
-            py-10
+            hidden
+            bg-[#09379A]
+            text-white
+
+            lg:grid
+            lg:h-dvh
+            lg:grid-rows-[minmax(0,1fr)_130px]
+            lg:overflow-hidden
           "
         >
-          <div className="w-full max-w-[353px]">
+          {/* MAIN BRAND AREA */}
 
-            {/* Welcome */}
-            <div className="text-center mb-7">
+          <div
+            className="
+              flex
+              min-h-0
+              items-center
+              justify-center
+              px-8
+            "
+          >
+            <div
+              className="
+                flex
+                flex-col
+                items-center
+                text-center
 
-              <h1 className="text-[22px] font-bold text-[#101116] mb-2">
-                مرحبًا بك مجددًا
-              </h1>
+                lg:-translate-y-[42px]
+                xl:-translate-y-[48px]
+              "
+            >
+              <img
+                src="/logo.svg"
+                alt="شعار بوابة التدريب الميداني"
+                className="
+                  block
+                  h-[120px]
+                  w-[120px]
+                  shrink-0
+                  object-contain
+                "
+              />
 
-              <p className="text-[12px] text-slate-500">
-                سجّل دخولك إلى حسابك للاستمرار
+              <h2
+                className="
+                  mb-0
+                  mt-[18px]
+                  whitespace-nowrap
+                  text-[28px]
+                  font-bold
+                  leading-[1.35]
+                  text-white
+
+                  xl:text-[32px]
+                "
+              >
+                بوابة التدريب الميداني
+              </h2>
+
+              <p
+                className="
+                  mb-0
+                  mt-[5px]
+                  whitespace-nowrap
+                  text-[17px]
+                  font-medium
+                  leading-[1.7]
+                  text-white/95
+
+                  xl:text-[20px]
+                "
+              >
+                كلية الدراسات المتوسطة - الأزهر
               </p>
 
+              <p
+                className="
+                  mb-0
+                  mt-[7px]
+                  text-[14px]
+                  font-normal
+                  leading-[24px]
+                  text-white/90
+
+                  xl:text-[16px]
+                "
+              >
+                “معاً نحو مستقبل مهني أفضل”
+              </p>
             </div>
+          </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit}>
+          {/* FEATURES AREA */}
 
-              {/* Student Number */}
-              <div className="mb-4">
+          <div
+            className="
+              px-[54px]
+              pb-[20px]
+            "
+          >
+            <div
+              className="
+                h-full
+                border-t
+                border-white/15
+                pt-[20px]
+              "
+            >
+              <div
+                className="
+                  grid
+                  grid-cols-3
+                  gap-4
+                "
+              >
+                <Feature
+                  icon={
+                    <CheckCircle2
+                      size={24}
+                      strokeWidth={1.8}
+                    />
+                  }
+                  text="متابعة مستمرة لحالة طلبك"
+                />
 
+                <Feature
+                  icon={
+                    <BriefcaseBusiness
+                      size={24}
+                      strokeWidth={1.8}
+                    />
+                  }
+                  text="فرص تدريبية متنوعة"
+                />
+
+                <Feature
+                  icon={
+                    <Star
+                      size={24}
+                      strokeWidth={1.8}
+                    />
+                  }
+                  text="تجربة تدريبية متميزة"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =====================================================
+            RIGHT / LOGIN SIDE
+        ====================================================== */}
+
+        <section
+          dir="rtl"
+          className="
+            min-h-dvh
+            overflow-x-hidden
+            overflow-y-auto
+            bg-[#F8FAFC]
+
+            lg:grid
+            lg:h-dvh
+            lg:min-h-0
+            lg:grid-rows-[minmax(0,1fr)_130px]
+            lg:overflow-hidden
+          "
+        >
+          {/* =====================================================
+              MOBILE / TABLET BRAND
+          ====================================================== */}
+
+          <div
+            className="
+              flex
+              flex-col
+              items-center
+              justify-center
+              px-4
+              pt-6
+              text-center
+
+              sm:pt-8
+
+              lg:hidden
+            "
+          >
+            <img
+              src="/logo-colored.svg"
+              alt="شعار بوابة التدريب الميداني"
+              className="
+                h-[110px]
+                w-[110px]
+                shrink-0
+                object-contain
+
+                sm:h-[125px]
+                sm:w-[125px]
+              "
+            />
+
+            <h2
+              className="
+                m-0
+                mt-[10px]
+                text-[21px]
+                font-bold
+                leading-[30px]
+                text-[#09379A]
+
+                sm:mt-[12px]
+                sm:text-[24px]
+                sm:leading-[34px]
+              "
+            >
+              بوابة التدريب الميداني
+            </h2>
+
+            <p
+              className="
+                m-0
+                mt-[2px]
+                text-[13px]
+                font-medium
+                leading-[22px]
+                text-[#64748B]
+
+                sm:text-[15px]
+                sm:leading-[25px]
+              "
+            >
+              كلية الدراسات المتوسطة - الأزهر
+            </p>
+          </div>
+
+          {/* =====================================================
+              MAIN FORM AREA
+          ====================================================== */}
+
+          <div
+            className="
+              flex
+              min-h-0
+              items-start
+              justify-center
+
+              px-5
+              pb-10
+              pt-8
+
+              sm:px-6
+              sm:pt-10
+
+              md:px-8
+
+              lg:items-center
+              lg:justify-end
+              lg:px-10
+              lg:py-0
+
+              xl:px-[80px]
+            "
+          >
+            <form
+              onSubmit={handleSubmit}
+              className="
+                w-full
+                max-w-[420px]
+
+                sm:max-w-[430px]
+
+                lg:max-w-[440px]
+              "
+            >
+              {/* WELCOME */}
+
+              <div className="text-right">
+                <h1
+                  className="
+                    m-0
+                    text-[26px]
+                    font-semibold
+                    leading-[38px]
+                    text-black
+
+                    sm:text-[29px]
+
+                    lg:text-[30px]
+
+                    xl:text-[32px]
+                  "
+                >
+                  مرحباً بك مجدداً
+                </h1>
+
+                <p
+                  className="
+                    m-0
+                    mt-[4px]
+                    text-[14px]
+                    font-normal
+                    leading-[26px]
+                    text-[#A1A1A1]
+
+                    lg:text-[15px]
+
+                    xl:text-[16px]
+                  "
+                >
+                  سجل دخولك إلى حسابك للاستمرار
+                </p>
+              </div>
+
+              {/* STUDENT ID */}
+
+              <div className="mt-[24px]">
                 <label
                   htmlFor="studentId"
                   className="
-                    block
-                    text-[11px]
-                    font-semibold
-                    text-[#252b35]
-                    mb-2
+                    flex
+                    items-center
+                    gap-[3px]
+                    text-[14px]
+                    font-bold
+                    text-black
+
+                    sm:text-[15px]
+
+                    xl:text-[16px]
                   "
                 >
-                  رقم الطالب
+                  <span>رقم الطالب</span>
+
+                  <span className="text-[#EB0909]">
+                    *
+                  </span>
                 </label>
 
-                <div className="relative">
-
+                <div className="relative mt-[9px]">
                   <input
                     id="studentId"
+                    name="studentId"
                     type="text"
-                    placeholder="أدخل رقم الطالب"
+                    inputMode="numeric"
+                    value={formData.studentId}
+                    onChange={handleChange}
+                    autoComplete="username"
                     className="
+                      h-[48px]
                       w-full
-                      h-[35px]
                       rounded-[6px]
                       border
-                      border-slate-300
+                      border-[#09379A]
                       bg-white
-                      px-3
-                      pr-9
-                      text-[11px]
-                      text-slate-700
+                      pl-[17px]
+                      pr-[45px]
+                      text-right
+                      text-[14px]
+                      font-medium
+                      text-[#1E293B]
                       outline-none
-                      placeholder:text-slate-400
-                      focus:border-blue-500
-                      focus:ring-2
-                      focus:ring-blue-100
+                      transition-all
+                      duration-200
+
+                      focus:ring-[3px]
+                      focus:ring-[#09379A]/10
                     "
                   />
 
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <UserIcon />
-                  </div>
-
+                  <span
+                    className="
+                      pointer-events-none
+                      absolute
+                      right-[14px]
+                      top-1/2
+                      flex
+                      -translate-y-1/2
+                      items-center
+                      justify-center
+                      text-[#09379A]
+                    "
+                  >
+                    <UserRound
+                      size={20}
+                      strokeWidth={1.8}
+                    />
+                  </span>
                 </div>
-
               </div>
 
-              {/* Password */}
-              <div className="mb-3">
+              {/* PASSWORD */}
 
+              <div className="mt-[20px]">
                 <label
                   htmlFor="password"
                   className="
-                    block
-                    text-[11px]
-                    font-semibold
-                    text-[#252b35]
-                    mb-2
+                    flex
+                    items-center
+                    gap-[3px]
+                    text-[14px]
+                    font-bold
+                    text-black
+
+                    sm:text-[15px]
+
+                    xl:text-[16px]
                   "
                 >
-                  كلمة المرور
+                  <span>كلمة المرور</span>
+
+                  <span className="text-[#EB0909]">
+                    *
+                  </span>
                 </label>
 
-                <div className="relative">
-
+                <div className="relative mt-[9px]">
                   <input
                     id="password"
-                    type="password"
-                    placeholder="أدخل كلمة المرور"
+                    name="password"
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
+                    value={formData.password}
+                    onChange={handleChange}
+                    autoComplete="current-password"
                     className="
+                      h-[48px]
                       w-full
-                      h-[35px]
                       rounded-[6px]
                       border
-                      border-slate-300
+                      border-[#E2E8F0]
                       bg-white
-                      px-3
-                      pr-9
-                      text-[11px]
-                      text-slate-700
+                      px-[45px]
+                      text-right
+                      text-[14px]
+                      font-normal
+                      text-[#1E293B]
                       outline-none
-                      placeholder:text-slate-400
-                      focus:border-blue-500
-                      focus:ring-2
-                      focus:ring-blue-100
+                      transition-all
+                      duration-200
+
+                      focus:border-[#09379A]
+                      focus:ring-[3px]
+                      focus:ring-[#09379A]/10
                     "
                   />
 
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <EyeIcon />
-                  </div>
-
-                </div>
-
-              </div>
-
-              {/* Remember / Forgot */}
-              <div
-                className="
-                  flex
-                  items-center
-                  justify-between
-                  mb-4
-                  text-[10px]
-                "
-              >
-
-                <label className="flex items-center gap-2 cursor-pointer">
-
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
+                  <span
                     className="
-                      w-[13px]
-                      h-[13px]
-                      rounded
-                      border-slate-300
-                      accent-blue-600
+                      pointer-events-none
+                      absolute
+                      right-[14px]
+                      top-1/2
+                      flex
+                      -translate-y-1/2
+                      items-center
+                      justify-center
+                      text-[#64748B]
                     "
-                  />
-
-                  <span className="text-slate-600">
-                    تذكرني
+                  >
+                    <LockKeyhole
+                      size={20}
+                      strokeWidth={1.8}
+                    />
                   </span>
 
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowPassword(
+                        (prev) => !prev
+                      )
+                    }
+                    aria-label={
+                      showPassword
+                        ? "إخفاء كلمة المرور"
+                        : "إظهار كلمة المرور"
+                    }
+                    className="
+                      absolute
+                      left-[10px]
+                      top-1/2
+                      flex
+                      h-[36px]
+                      w-[36px]
+                      -translate-y-1/2
+                      cursor-pointer
+                      items-center
+                      justify-center
+                      rounded-[7px]
+                      border-0
+                      bg-transparent
+                      p-0
+                      text-[#64748B]
+                      transition-all
+                      duration-200
+
+                      hover:bg-[#F1F5F9]
+                      hover:text-[#09379A]
+
+                      focus-visible:outline-none
+                      focus-visible:ring-2
+                      focus-visible:ring-[#09379A]/20
+                    "
+                  >
+                    {showPassword ? (
+                      <EyeOff
+                        size={20}
+                        strokeWidth={1.8}
+                      />
+                    ) : (
+                      <Eye
+                        size={20}
+                        strokeWidth={1.8}
+                      />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* REMEMBER / FORGOT */}
+
+              <div
+                className="
+                  mt-[14px]
+                  flex
+                  min-h-[28px]
+                  items-center
+                  justify-between
+                  gap-3
+                "
+              >
+                <label
+                  className="
+                    flex
+                    shrink-0
+                    cursor-pointer
+                    select-none
+                    items-center
+                    gap-[8px]
+                    text-[13px]
+                    text-[#1E293B]
+
+                    xl:text-[14px]
+                  "
+                >
+                  <CustomCheckbox
+                    checked={rememberMe}
+                    onChange={() =>
+                      setRememberMe(
+                        (prev) => !prev
+                      )
+                    }
+                  />
+
+                  <span>تذكرني</span>
                 </label>
 
                 <button
                   type="button"
+                  onClick={() =>
+                    navigate("/forgot-password")
+                  }
                   className="
-                    text-slate-700
-                    underline
-                    underline-offset-2
-                    hover:text-blue-600
+                    border-0
+                    bg-transparent
+                    p-0
+                    text-[13px]
+                    text-[#09379A]
+                    transition
+
+                    hover:underline
+
+                    xl:text-[14px]
                   "
                 >
                   نسيت كلمة المرور؟
                 </button>
-
               </div>
 
-              {/* Login Button */}
+              {/* LOGIN BUTTON */}
+
               <button
                 type="submit"
+                dir="ltr"
                 className="
+                  mt-[20px]
+                  flex
+                  h-[48px]
                   w-full
-                  h-[35px]
-                  rounded-[6px]
-                  bg-[#505b70]
+                  cursor-pointer
+                  items-center
+                  justify-center
+                  gap-[8px]
+                  rounded-[10px]
+                  border-0
+                  bg-[#09379A]
+                  text-[14px]
+                  font-bold
                   text-white
-                  text-[11px]
-                  font-bold
-                  transition
-                  hover:bg-[#414b5f]
-                  flex
-                  items-center
-                  justify-center
-                  gap-2
+                  shadow-[0_1px_2px_rgba(0,0,0,0.08)]
+                  transition-all
+                  duration-200
+
+                  hover:bg-[#072F86]
+                  hover:shadow-[0_5px_15px_rgba(9,55,154,0.16)]
+
+                  active:scale-[0.995]
+
+                  focus-visible:outline-none
+                  focus-visible:ring-4
+                  focus-visible:ring-[#09379A]/15
                 "
               >
-                <span>تسجيل الدخول</span>
-                <span className="text-[13px]">←</span>
-              </button>
+                <ArrowLeft
+                  size={16}
+                  strokeWidth={2}
+                />
 
-              {/* Divider */}
-              <div className="flex items-center gap-3 my-4">
-
-                <div className="h-px bg-slate-300 flex-1"></div>
-
-                <span className="text-[10px] text-slate-500">
-                  أو
+                <span dir="rtl">
+                  تسجيل الدخول
                 </span>
-
-                <div className="h-px bg-slate-300 flex-1"></div>
-
-              </div>
-
-              {/* University Login */}
-              <button
-                type="button"
-                className="
-                  w-full
-                  h-[35px]
-                  rounded-[6px]
-                  border
-                  border-slate-300
-                  bg-white
-                  text-[#343b48]
-                  text-[10px]
-                  font-bold
-                  flex
-                  items-center
-                  justify-center
-                  gap-2
-                  hover:bg-slate-50
-                  transition
-                "
-              >
-                <UniversityIcon />
-
-                تسجيل الدخول عبر حساب الجامعة
               </button>
-
             </form>
-
-          </div>
-        </section>
-
-
-        {/* =====================================================
-            ILLUSTRATION - RIGHT
-        ====================================================== */}
-        <section
-          className="
-            hidden
-            lg:flex
-            min-h-screen
-            bg-[#f1f3f7]
-            border-r
-            border-slate-200
-            flex-col
-            items-center
-            justify-between
-            px-10
-            py-10
-          "
-        >
-
-          {/* Title */}
-          <div className="flex flex-col items-center text-center">
-
-            <div className="mb-5">
-              <GraduationIcon />
-            </div>
-
-            <h2 className="text-[21px] font-bold text-[#303a4b]">
-              نظام إدارة التدريب الميداني للطلبة
-            </h2>
-
-            <p className="mt-2 text-[11px] text-slate-500">
-              معًا نحو مستقبل مهني أفضل
-            </p>
-
           </div>
 
-          {/* Illustration */}
+          {/* =====================================================
+              COPYRIGHT AREA
+          ====================================================== */}
+
           <div
             className="
-              w-full
-              max-w-[315px]
-              h-[202px]
-              rounded-md
-              bg-[#e1e5ed]
               flex
               items-center
               justify-center
+              px-5
+              pb-6
+              text-center
+
+              sm:px-6
+
+              md:px-8
+
+              lg:px-10
+              lg:pb-0
+
+              xl:px-[80px]
             "
           >
-            <span className="text-[12px] text-slate-400">
-              مكان الـ Illustration
-            </span>
+            <p
+              className="
+                m-0
+                text-[10px]
+                font-normal
+                leading-[18px]
+                text-[#94A3B8]
+
+                sm:text-[11px]
+
+                xl:text-[12px]
+              "
+            >
+              © 2027 كلية الدراسات المتوسطة - جامعة الأزهر. جميع الحقوق محفوظة.
+            </p>
           </div>
-
-          {/* Features */}
-          <div className="w-full max-w-[370px] grid grid-cols-3 gap-5">
-
-            {/* Feature 1 */}
-            <div className="flex flex-col items-center text-center">
-
-              <div className="mb-3">
-                <UserFeatureIcon />
-              </div>
-
-              <p className="text-[10px] leading-5 text-slate-600">
-                تجربة تدريبية متميزة
-              </p>
-
-            </div>
-
-            {/* Feature 2 */}
-            <div className="flex flex-col items-center text-center">
-
-              <div className="mb-3">
-                <FolderIcon />
-              </div>
-
-              <p className="text-[10px] leading-5 text-slate-600">
-                فرص تدريبية متنوعة
-              </p>
-
-            </div>
-
-            {/* Feature 3 */}
-            <div className="flex flex-col items-center text-center">
-
-              <div className="mb-3">
-                <CheckIcon />
-              </div>
-
-              <p className="text-[10px] leading-5 text-slate-600">
-                متابعة مستمرة لحالة طلبك
-              </p>
-
-            </div>
-
-          </div>
-
         </section>
-
       </div>
     </div>
+  );
+}
+
+/* =========================================================
+   FEATURE
+========================================================= */
+
+function Feature({ icon, text }) {
+  return (
+    <div
+      className="
+        flex
+        min-w-0
+        flex-col
+        items-center
+        gap-[8px]
+        text-center
+      "
+    >
+      <div
+        className="
+          flex
+          h-[44px]
+          w-[44px]
+          shrink-0
+          items-center
+          justify-center
+          rounded-[12px]
+          bg-white/10
+          text-white
+        "
+      >
+        {icon}
+      </div>
+
+      <p
+        className="
+          m-0
+          text-[10px]
+          font-medium
+          leading-[15px]
+          text-white/95
+
+          xl:text-[12px]
+          xl:whitespace-nowrap
+        "
+      >
+        {text}
+      </p>
+    </div>
+  );
+}
+
+/* =========================================================
+   CHECKBOX
+========================================================= */
+
+function CustomCheckbox({
+  checked,
+  onChange,
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      aria-pressed={checked}
+      aria-label="تذكرني"
+      className={`
+        flex
+        h-[16px]
+        w-[16px]
+        shrink-0
+        cursor-pointer
+        items-center
+        justify-center
+        rounded-[3px]
+        border
+        p-0
+        transition-all
+        duration-200
+
+        ${
+          checked
+            ? `
+                border-[#09379A]
+                bg-[#09379A]
+                text-white
+              `
+            : `
+                border-[#CBD5E1]
+                bg-white
+                text-transparent
+              `
+        }
+      `}
+    >
+      <Check
+        size={11}
+        strokeWidth={2.3}
+      />
+    </button>
   );
 }

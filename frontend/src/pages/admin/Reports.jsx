@@ -1,606 +1,1309 @@
+import AcademicFooter from "../../components/shared/AcademicFooter";
+import AdminHeader from "../../components/admin/Header";
+import { useEffect, useMemo, useState } from "react";
+import { getReports, updateReport } from "./reportsStore";
 import { useNavigate } from "react-router-dom";
 
-import Header from "../../components/admin/Header";
+import {
+  Bell,
+  Menu,
+  Search,
+  SlidersHorizontal,
+  ArrowDownUp,
+  Eye,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+} from "lucide-react";
+
 import Sidebar from "../../components/admin/Sidebar";
+
+/* =========================================================
+   DATA
+========================================================= */
+
+const STATUS_FILTERS = [
+  {
+    id: "all",
+    label: "الكل",
+  },
+  {
+    id: "pending",
+    label: "بانتظار المراجعة",
+  },
+  {
+    id: "approved",
+    label: "معتمد",
+  },
+  {
+    id: "revision",
+    label: "مطلوب تعديل",
+  },
+];
+
+/* =========================================================
+   PAGE
+========================================================= */
 
 export default function Reports() {
   const navigate = useNavigate();
 
-  const stats = [
-    {
-      title: "الطلبات قيد المعالجة",
-      value: "42",
-      change: "▼ 5%",
-      icon: "◷",
-    },
-    {
-      title: "نسبة إتمام التدريب",
-      value: "78%",
-      change: "▼ 6%",
-      icon: "✓",
-    },
-    {
-      title: "عدد الطلبة المسجلين",
-      value: "186",
-      change: "▲ 10%",
-      icon: "♟",
-    },
-    {
-      title: "فرص التدريب المتاحة",
-      value: "142",
-      change: "▲ 15%",
-      icon: "▣",
-    },
-    {
-      title: "عدد جهات التدريب",
-      value: "36",
-      change: "▲ 8%",
-      icon: "▦",
-    },
-    {
-      title: "عدد التقارير الصادرة",
-      value: "24",
-      change: "▲ 12%",
-      icon: "▤",
-    },
-  ];
+  const [reports, setReports] = useState(getReports);
 
-  const latestReports = [
-    {
-      id: 1,
-      name: "تقرير الطلبة المسجلين",
-      type: "إحصائي",
-      date: "2025/04/20",
-      status: "مصدر",
-    },
-    {
-      id: 2,
-      name: "تقرير جهات التدريب",
-      type: "إحصائي",
-      date: "2025/04/18",
-      status: "مصدر",
-    },
-    {
-      id: 3,
-      name: "تقرير فرص التدريب",
-      type: "إحصائي",
-      date: "2025/04/15",
-      status: "مصدر",
-    },
-    {
-      id: 4,
-      name: "تقرير التقييمات",
-      type: "إحصائي",
-      date: "2025/04/10",
-      status: "مصدر",
-    },
-  ];
+  useEffect(() => {
+    const refresh = () => setReports(getReports());
+    window.addEventListener("admin-reports-updated", refresh);
+    window.addEventListener("storage", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("admin-reports-updated", refresh);
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
 
-  const quickReports = [
-    "تقرير الطلبة المسجلين",
-    "تقرير جهات التدريب",
-    "تقرير فرص التدريب",
-    "تقرير التقييمات",
-    "تقرير الإتمام والشهادات",
-    "تقرير الزيارات والمتابعة",
-  ];
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("newest");
 
-  const studentGrowth = [
-    { month: "يناير", value: 98 },
-    { month: "فبراير", value: 112 },
-    { month: "مارس", value: 135 },
-    { month: "أبريل", value: 156 },
-    { month: "مايو", value: 172 },
-    { month: "يونيو", value: 186 },
-  ];
+  const [showFilters, setShowFilters] = useState(false);
+  const [showSort, setShowSort] = useState(false);
 
-  const specialties = [
-    { name: "هندسة", value: 42 },
-    { name: "حاسب", value: 36 },
-    { name: "إدارة", value: 28 },
-    { name: "علوم", value: 22 },
-    { name: "آداب", value: 18 },
-    { name: "أخرى", value: 10 },
-  ];
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const pageSize = 4;
+
+  /* =======================================================
+     COUNTS
+  ======================================================= */
+
+  const counts = useMemo(() => {
+    return {
+      all: reports.length,
+
+      pending: reports.filter(
+        (report) => report.status === "pending"
+      ).length,
+
+      approved: reports.filter(
+        (report) => report.status === "approved"
+      ).length,
+
+      revision: reports.filter(
+        (report) => report.status === "revision"
+      ).length,
+    };
+  }, [reports]);
+
+  /* =======================================================
+     FILTERING
+  ======================================================= */
+
+  const filteredReports = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    let result = reports.filter((report) => {
+      const matchesSearch =
+        !query ||
+        report.student
+          .toLowerCase()
+          .includes(query) ||
+        report.type
+          .toLowerCase()
+          .includes(query);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        report.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+
+    result = [...result].sort((a, b) => {
+      if (sortOrder === "newest") {
+        return b.date.localeCompare(a.date);
+      }
+
+      if (sortOrder === "oldest") {
+        return a.date.localeCompare(b.date);
+      }
+
+      if (sortOrder === "student") {
+        return a.student.localeCompare(
+          b.student,
+          "ar"
+        );
+      }
+
+      return 0;
+    });
+
+    return result;
+  }, [
+    reports,
+    search,
+    statusFilter,
+    sortOrder,
+  ]);
+
+  /* =======================================================
+     PAGINATION
+  ======================================================= */
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredReports.length / pageSize
+    )
+  );
+
+  const safePage = Math.min(
+    currentPage,
+    totalPages
+  );
+
+  const visibleReports = filteredReports.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize
+  );
+
+  /* =======================================================
+     ACTIONS
+  ======================================================= */
+
+  const toggleSidebar = () => {
+    window.dispatchEvent(
+      new Event("toggle-admin-sidebar")
+    );
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setSortOrder("newest");
+    setCurrentPage(1);
+
+    setShowFilters(false);
+    setShowSort(false);
+  };
+
+  const approveReport = (id) => {
+    try {
+      updateReport(id, { status: "approved" });
+      setReports(getReports());
+    } catch (error) {
+      console.error("تعذر اعتماد التقرير", error);
+    }
+  };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-white">
-      <Header />
+    <div
+      dir="rtl"
+      className="
+        flex
+        h-screen
+        w-full
+        overflow-hidden
 
-      <div className="flex">
-        <Sidebar />
+        bg-[#F8FAFC]
 
-        <main className="flex-1 min-w-0 px-[24px] pt-[14px] pb-[20px]">
-          {/* ================= PAGE HEADER ================= */}
-          <div className="mb-[10px]">
-            <div className="flex items-center gap-[6px] text-[11px] text-[#7a8393] mb-[2px]">
-              <span>الرئيسية</span>
-              <span>›</span>
-              <span>التقارير والإحصائيات</span>
-            </div>
+        font-['Cairo']
+        text-[#111C2D]
+      "
+    >
+      {/* =====================================================
+          SIDEBAR
+      ====================================================== */}
 
-            <h1 className="text-[23px] font-bold text-[#1b2430]">
-              التقارير والإحصائيات
-            </h1>
-          </div>
+      <Sidebar />
 
-          {/* ================= FILTERS ================= */}
-          <section
+      {/* =====================================================
+          PAGE
+      ====================================================== */}
+
+      <div
+        className="
+          flex
+          h-screen
+          min-w-0
+          flex-1
+          flex-col
+          overflow-hidden
+        "
+      >
+        {/* =================================================
+            HEADER
+        ================================================== */}
+
+        <AdminHeader />
+
+        {/* =================================================
+            CONTENT
+        ================================================== */}
+
+        <main
+          className="
+            w-full
+            min-w-0
+            flex-1
+
+            overflow-x-hidden
+            overflow-y-auto
+
+            px-4
+            pb-7
+            pt-5
+
+            sm:px-6
+            lg:px-8
+          "
+        >
+          <div
             className="
-              border
-              border-[#dfe3ea]
-              rounded-[10px]
-              bg-white
-              px-[14px]
-              py-[10px]
-              mb-[10px]
+              mx-auto
+              w-full
+              max-w-[1450px]
             "
           >
-            <div className="grid grid-cols-[1.3fr_1fr_1fr_1fr_auto] gap-[12px] items-end">
-              <div>
-                <label className="block text-[11px] font-semibold text-[#3b4454] mb-[4px]">
-                  الفترة الزمنية
-                </label>
+            {/* =============================================
+                BREADCRUMB
+            ============================================== */}
+
+            <div
+              className="
+                mb-8
+
+                flex
+                items-center
+                gap-2
+
+                text-[12px]
+                text-[#64748B]
+              "
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    "/admin/dashboard"
+                  )
+                }
+                className="
+                  hover:text-[#09379A]
+                "
+              >
+                الرئيسية
+              </button>
+
+              <ChevronLeft size={15} />
+
+              <span
+                className="
+                  font-semibold
+                  text-[#111C2D]
+                "
+              >
+                التقارير
+              </span>
+            </div>
+
+            {/* =============================================
+                PAGE TITLE
+            ============================================== */}
+
+            <section className="mb-6">
+              <h1
+                className="
+                  m-0
+
+                  text-[23px]
+                  font-bold
+                  leading-9
+
+                  text-[#111C2D]
+
+                  sm:text-[26px]
+                "
+              >
+                التقارير
+              </h1>
+
+              <p
+                className="
+                  m-0
+                  mt-1
+
+                  text-[13px]
+                  text-[#64748B]
+                "
+              >
+                مراجعة تقارير الطلاب
+              </p>
+            </section>
+
+            {/* =============================================
+                SEARCH + TOOLS
+            ============================================== */}
+
+            <section
+              className="
+                mb-5
+
+                flex
+                min-w-0
+                flex-col
+                gap-3
+
+                xl:flex-row
+                xl:items-center
+              "
+            >
+              <div
+                className="
+                  relative
+                  min-w-0
+                  flex-1
+                "
+              >
+                <Search
+                  size={18}
+                  className="
+                    pointer-events-none
+
+                    absolute
+                    right-4
+                    top-1/2
+
+                    -translate-y-1/2
+
+                    text-[#64748B]
+                  "
+                />
 
                 <input
-                  type="text"
-                  defaultValue="2025/04/01 - 2025/04/30"
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(
+                      event.target.value
+                    );
+
+                    setCurrentPage(1);
+                  }}
+                  placeholder="ابحث باسم الطالب أو نوع التقرير..."
                   className="
+                    h-[44px]
                     w-full
-                    h-[38px]
+                    min-w-0
+
                     rounded-[8px]
+
                     border
-                    border-[#c9cfd9]
+                    border-[#E0E7F2]
+
                     bg-white
-                    px-[10px]
+
+                    pr-11
+                    pl-4
+
+                    text-[13px]
+
                     outline-none
-                    text-[11px]
-                    text-[#4a5465]
+
+                    focus:border-[#09379A]
+
+                    focus:ring-2
+                    focus:ring-[#09379A]/10
                   "
                 />
               </div>
 
-              <Filter label="التخصص">
-                <option>الكل</option>
-                <option>هندسة</option>
-                <option>حاسب</option>
-                <option>إدارة</option>
-                <option>علوم</option>
-              </Filter>
-
-              <Filter label="الجهة">
-                <option>الكل</option>
-                <option>شركة التقنية</option>
-                <option>مؤسسة الإبداع</option>
-                <option>شركة الحلول</option>
-              </Filter>
-
-              <Filter label="نوع التقرير">
-                <option>الكل</option>
-                <option>إحصائي</option>
-                <option>تقييمات</option>
-                <option>زيارات</option>
-              </Filter>
-
-              <button
-                type="button"
-                className="
-                  h-[38px]
-                  px-[14px]
-                  rounded-[7px]
-                  border
-                  border-[#b9c0cc]
-                  bg-white
-                  text-[10px]
-                  text-[#3b4454]
-                  hover:bg-[#eef0f4]
-                "
-              >
-                ↻ تحديث البيانات
-              </button>
-            </div>
-          </section>
-
-          {/* ================= STATS ================= */}
-          <section className="grid grid-cols-6 gap-[10px] mb-[10px]">
-            {stats.map((stat) => (
               <div
-                key={stat.title}
                 className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  px-[12px]
-                  py-[10px]
+                  flex
+                  shrink-0
+                  flex-wrap
+                  gap-3
                 "
               >
-                <div className="flex items-center justify-between text-[10px] text-[#667085]">
-                  <span>{stat.title}</span>
-                  <span>{stat.icon}</span>
-                </div>
+                {/* FILTER */}
 
-                <div className="text-[24px] font-bold text-[#1f2733] leading-[1.4]">
-                  {stat.value}
-                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowFilters(
+                        (value) =>
+                          !value
+                      );
 
-                <div className="text-[9px] text-[#7a8393]">
-                  {stat.change} هذا الشهر
-                </div>
-              </div>
-            ))}
-          </section>
-
-          {/* ================= CHARTS ================= */}
-          <section className="grid grid-cols-3 gap-[12px] mb-[10px]">
-            {/* Student Growth */}
-            <Card title="تطور أعداد الطلبة عبر الأشهر">
-              <div className="h-[165px] flex items-end gap-[10px] px-[8px] pt-[12px]">
-                {studentGrowth.map((item) => (
-                  <div
-                    key={item.month}
-                    className="flex-1 flex flex-col items-center justify-end h-full"
-                  >
-                    <span className="text-[9px] text-[#667085] mb-[4px]">
-                      {item.value}
-                    </span>
-
-                    <div
-                      className="
-                        w-full
-                        max-w-[28px]
-                        rounded-t-[5px]
-                        bg-[#4b5568]
-                      "
-                      style={{
-                        height: `${(item.value / 200) * 115}px`,
-                      }}
-                    />
-
-                    <span className="text-[9px] text-[#7a8393] mt-[5px]">
-                      {item.month}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* Training Status */}
-            <Card title="حالة التدريب">
-              <div className="flex items-center gap-[18px] py-[12px]">
-                <div
-                  className="
-                    w-[130px]
-                    h-[130px]
-                    rounded-full
-                    flex
-                    items-center
-                    justify-center
-                    shrink-0
-                  "
-                  style={{
-                    background:
-                      "conic-gradient(#4b5568 0% 78%, #8b95a7 78% 90%, #c1c7d0 90% 96%, #e5e7eb 96% 100%)",
-                  }}
-                >
-                  <div
+                      setShowSort(false);
+                    }}
                     className="
-                      w-[82px]
-                      h-[82px]
-                      bg-white
-                      rounded-full
                       flex
-                      flex-col
+                      h-[44px]
                       items-center
-                      justify-center
+                      gap-2
+
+                      rounded-[8px]
+
+                      border
+                      border-[#E0E7F2]
+
+                      bg-white
+
+                      px-4
+
+                      text-[12px]
+
+                      hover:border-[#B9C9E8]
                     "
                   >
-                    <span className="text-[20px] font-bold text-[#1f2733]">
-                      186
-                    </span>
+                    <SlidersHorizontal
+                      size={17}
+                    />
 
-                    <span className="text-[9px] text-[#7a8393]">
-                      طالب
-                    </span>
-                  </div>
+                    تصفية
+                  </button>
+
+                  {showFilters && (
+                    <div
+                      className="
+                        absolute
+                        right-0
+                        top-[50px]
+                        z-20
+
+                        w-[240px]
+
+                        rounded-[10px]
+
+                        border
+                        border-[#E0E7F2]
+
+                        bg-white
+
+                        p-3
+
+                        shadow-lg
+                      "
+                    >
+                      {STATUS_FILTERS.map(
+                        (item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setStatusFilter(
+                                item.id
+                              );
+
+                              setCurrentPage(
+                                1
+                              );
+
+                              setShowFilters(
+                                false
+                              );
+                            }}
+                            className={`
+                              w-full
+
+                              rounded-[7px]
+
+                              px-3
+                              py-2
+
+                              text-right
+                              text-[11px]
+
+                              ${
+                                statusFilter ===
+                                item.id
+                                  ? `
+                                      bg-[#EEF4FF]
+                                      font-bold
+                                      text-[#09379A]
+                                    `
+                                  : `
+                                      hover:bg-[#F8FAFC]
+                                    `
+                              }
+                            `}
+                          >
+                            {item.label}
+                          </button>
+                        )
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={
+                          resetFilters
+                        }
+                        className="
+                          mt-2
+
+                          flex
+                          h-[34px]
+                          w-full
+
+                          items-center
+                          justify-center
+                          gap-1
+
+                          rounded-[7px]
+
+                          border
+                          border-[#E0E7F2]
+
+                          text-[10px]
+                        "
+                      >
+                        <RotateCcw
+                          size={13}
+                        />
+
+                        إعادة ضبط
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex-1 grid gap-[8px]">
-                  <Legend label="مكتمل" value="78%" />
-                  <Legend label="قيد التنفيذ" value="12%" />
-                  <Legend label="قيد المراجعة" value="6%" />
-                  <Legend label="لم يبدأ" value="4%" />
-                </div>
-              </div>
-            </Card>
+                {/* SORT */}
 
-            {/* Specializations */}
-            <Card title="التدريب حسب التخصص">
-              <div className="grid gap-[8px] py-[8px]">
-                {specialties.map((item) => (
-                  <div
-                    key={item.name}
-                    className="grid grid-cols-[55px_1fr_25px] gap-[8px] items-center"
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSort(
+                        (value) =>
+                          !value
+                      );
+
+                      setShowFilters(
+                        false
+                      );
+                    }}
+                    className="
+                      flex
+                      h-[44px]
+
+                      items-center
+                      gap-2
+
+                      rounded-[8px]
+
+                      border
+                      border-[#E0E7F2]
+
+                      bg-white
+
+                      px-4
+
+                      text-[12px]
+
+                      hover:border-[#B9C9E8]
+                    "
                   >
-                    <span className="text-[9px] text-[#667085]">
-                      {item.name}
-                    </span>
+                    <ArrowDownUp
+                      size={17}
+                    />
 
-                    <div className="h-[7px] bg-[#eceff4] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[#4b5568] rounded-full"
-                        style={{
-                          width: `${(item.value / 46) * 100}%`,
+                    ترتيب
+                  </button>
+
+                  {showSort && (
+                    <div
+                      className="
+                        absolute
+                        left-0
+                        top-[50px]
+                        z-20
+
+                        w-[180px]
+
+                        rounded-[10px]
+
+                        border
+                        border-[#E0E7F2]
+
+                        bg-white
+
+                        p-2
+
+                        shadow-lg
+                      "
+                    >
+                      <SortButton
+                        label="الأحدث أولًا"
+                        active={
+                          sortOrder ===
+                          "newest"
+                        }
+                        onClick={() => {
+                          setSortOrder(
+                            "newest"
+                          );
+
+                          setShowSort(
+                            false
+                          );
+                        }}
+                      />
+
+                      <SortButton
+                        label="الأقدم أولًا"
+                        active={
+                          sortOrder ===
+                          "oldest"
+                        }
+                        onClick={() => {
+                          setSortOrder(
+                            "oldest"
+                          );
+
+                          setShowSort(
+                            false
+                          );
+                        }}
+                      />
+
+                      <SortButton
+                        label="حسب اسم الطالب"
+                        active={
+                          sortOrder ===
+                          "student"
+                        }
+                        onClick={() => {
+                          setSortOrder(
+                            "student"
+                          );
+
+                          setShowSort(
+                            false
+                          );
                         }}
                       />
                     </div>
-
-                    <span className="text-[9px] font-semibold text-[#3b4454]">
-                      {item.value}
-                    </span>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
-            </Card>
-          </section>
+            </section>
 
-          {/* ================= BOTTOM AREA ================= */}
-          <section className="grid grid-cols-[1.4fr_1fr_230px] gap-[12px]">
-            {/* Latest Reports */}
-            <div
+            {/* =============================================
+                STATUS FILTERS
+            ============================================== */}
+
+            <section
               className="
-                border
-                border-[#dfe3ea]
-                rounded-[10px]
-                bg-white
-                overflow-hidden
+                mb-6
+
+                flex
+                flex-wrap
+                items-center
+                gap-2
               "
             >
-              <div className="px-[14px] py-[10px]">
-                <h2 className="text-[15px] font-bold text-[#1f2733]">
-                  أحدث التقارير الصادرة
-                </h2>
-              </div>
+              {STATUS_FILTERS.map(
+                (item) => {
+                  const count =
+                    counts[item.id];
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-right">
-                  <thead className="bg-[#f1f3f7]">
-                    <tr>
-                      {[
-                        "#",
-                        "اسم التقرير",
-                        "نوع التقرير",
-                        "تاريخ الإصدار",
-                        "الحالة",
-                        "إجراءات",
-                      ].map((heading) => (
-                        <th
-                          key={heading}
-                          className="
-                            px-[9px]
-                            py-[8px]
-                            text-[9px]
-                            font-semibold
-                            text-[#3b4454]
-                            border-b
-                            border-[#dfe3ea]
-                            whitespace-nowrap
-                          "
-                        >
-                          {heading}
-                        </th>
-                      ))}
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter(
+                          item.id
+                        );
+
+                        setCurrentPage(
+                          1
+                        );
+                      }}
+                      className={`
+                        h-[34px]
+
+                        rounded-full
+
+                        border
+
+                        px-4
+
+                        text-[11px]
+
+                        ${
+                          statusFilter ===
+                          item.id
+                            ? `
+                                border-[#09379A]
+                                bg-[#09379A]
+                                font-semibold
+                                text-white
+                              `
+                            : `
+                                border-[#E0E7F2]
+                                bg-white
+                                text-[#475569]
+                              `
+                        }
+                      `}
+                    >
+                      {item.id ===
+                      "all"
+                        ? "الكل"
+                        : item.label}
+
+                      {item.id ===
+                        "pending" &&
+                        ` ${count}`}
+                    </button>
+                  );
+                }
+              )}
+            </section>
+
+            {/* =============================================
+                TABLE
+            ============================================== */}
+
+            <section
+              className="
+                w-full
+                min-w-0
+                overflow-hidden
+
+                rounded-[12px]
+
+                border
+                border-[#E0E7F2]
+
+                bg-white
+
+                p-3
+
+                sm:p-5
+              "
+            >
+              <div
+                className="
+                  w-full
+                  max-w-full
+                  min-w-0
+
+                  overflow-x-auto
+                  overflow-y-hidden
+
+                  rounded-[9px]
+
+                  border
+                  border-[#E0E7F2]
+                "
+              >
+                <table
+                  className="
+                    w-full
+                    min-w-[900px]
+
+                    border-collapse
+
+                    text-right
+                  "
+                >
+                  <thead>
+                    <tr
+                      className="
+                        bg-[#F1F5F9]
+
+                        text-[11px]
+                        font-semibold
+                        text-[#64748B]
+                      "
+                    >
+                      <th className="px-4 py-4">
+                        اسم الطالب
+                      </th>
+
+                      <th className="px-4 py-4">
+                        نوع التقرير
+                      </th>
+
+                      <th className="px-4 py-4">
+                        تاريخ الإرسال
+                      </th>
+
+                      <th className="px-4 py-4">
+                        الحالة
+                      </th>
+
+                      <th className="px-4 py-4">
+                        الملاحظات
+                      </th>
+
+                      <th className="px-4 py-4">
+                        الإجراءات
+                      </th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {latestReports.map((report) => (
-                      <tr
-                        key={report.id}
-                        className="border-b border-[#eceff4] last:border-b-0"
-                      >
-                        <td className="px-[9px] py-[9px] text-[10px] text-[#667085]">
-                          {report.id}
-                        </td>
+                    {visibleReports.map(
+                      (report) => (
+                        <tr
+                          key={
+                            report.id
+                          }
+                          className="
+                            border-t
+                            border-[#E6EBF5]
 
-                        <td className="px-[9px] py-[9px] text-[10px] font-semibold text-[#2b3340]">
-                          {report.name}
-                        </td>
+                            text-[11px]
 
-                        <td className="px-[9px] py-[9px] text-[10px] text-[#4a5465]">
-                          {report.type}
-                        </td>
-
-                        <td className="px-[9px] py-[9px] text-[10px] text-[#667085]">
-                          {report.date}
-                        </td>
-
-                        <td className="px-[9px] py-[9px]">
-                          <span
+                            hover:bg-[#FAFBFE]
+                          "
+                        >
+                          <td
                             className="
-                              inline-flex
-                              px-[9px]
-                              py-[3px]
-                              rounded-full
-                              bg-[#dff1e6]
-                              text-[#236a45]
-                              text-[9px]
+                              px-4
+                              py-4
+
+                              font-semibold
+                              text-[#111C2D]
                             "
                           >
-                            {report.status}
-                          </span>
-                        </td>
+                            {
+                              report.student
+                            }
+                          </td>
 
-                        <td className="px-[9px] py-[9px]">
-                          <button
-                            type="button"
+                          <td className="px-4 py-4">
+                            {report.type}
+                          </td>
+
+                          <td
                             className="
-                              h-[27px]
-                              px-[10px]
-                              rounded-[6px]
-                              border
-                              border-[#b9c0cc]
-                              bg-white
-                              text-[9px]
-                              text-[#3b4454]
-                              hover:bg-[#eef0f4]
+                              whitespace-nowrap
+
+                              px-4
+                              py-4
                             "
+                            dir="ltr"
                           >
-                            عرض
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                            {report.date}
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <ReportStatus
+                              status={
+                                report.status
+                              }
+                            />
+                          </td>
+
+                          <td className="px-4 py-4">
+                            {report.note ||
+                              "—"}
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <div
+                              className="
+                                flex
+                                items-center
+                                gap-2
+                              "
+                            >
+                              {/* =========================
+                                  VIEW REPORT
+                              ========================== */}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigate(
+                                    `/admin/reports/${report.id}`
+                                  )
+                                }
+                                className="
+                                  flex
+                                  h-[32px]
+                                  items-center
+                                  gap-[5px]
+                                  rounded-[7px]
+                                  border
+                                  border-[#E0E7F2]
+                                  bg-white
+                                  px-3
+                                  text-[10px]
+                                  hover:border-[#09379A]
+                                  hover:text-[#09379A]
+                                "
+                              >
+                                <Eye
+                                  size={
+                                    14
+                                  }
+                                />
+
+                                عرض
+                              </button>
+
+                              {/* =========================
+                                  APPROVE
+                              ========================== */}
+
+                              {report.status !==
+                                "approved" && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    approveReport(
+                                      report.id
+                                    )
+                                  }
+                                  className="
+                                    flex
+                                    h-[32px]
+
+                                    items-center
+                                    gap-[5px]
+
+                                    rounded-[7px]
+
+                                    border-0
+
+                                    bg-[#09379A]
+
+                                    px-3
+
+                                    text-[10px]
+                                    font-semibold
+                                    text-white
+
+                                    hover:bg-[#072E81]
+                                  "
+                                >
+                                  <Check
+                                    size={
+                                      14
+                                    }
+                                  />
+
+                                  اعتماد
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    )}
                   </tbody>
                 </table>
               </div>
-            </div>
 
-            {/* Quick Reports */}
-            <Card title="التقارير السريعة">
-              <div>
-                {quickReports.map((report) => (
-                  <button
-                    key={report}
-                    type="button"
-                    className="
-                      w-full
-                      flex
-                      items-center
-                      gap-[8px]
-                      py-[6px]
-                      border-b
-                      border-[#eceff4]
-                      last:border-b-0
-                      text-[10px]
-                      text-[#3b4454]
-                      hover:bg-[#f8f9fb]
-                    "
-                  >
-                    <span className="text-[#8a93a3]">▤</span>
-                    {report}
-                  </button>
-                ))}
-              </div>
-            </Card>
+              {/* ===========================================
+                  PAGINATION
+              ============================================ */}
 
-            {/* Export */}
-            <div className="grid gap-[8px] content-start">
-              <Card title="خيارات التصدير">
-                <div className="grid gap-[6px]">
-                  <ExportButton text="↓ تصدير إلى PDF" />
-                  <ExportButton text="↓ تصدير إلى Excel" />
-                  <ExportButton text="↓ تصدير إلى Word" />
-                </div>
-              </Card>
-
-              <button
-                type="button"
-                onClick={() => navigate("/admin/reports/custom")}
+              <div
                 className="
-                  w-full
-                  h-[36px]
-                  rounded-[7px]
-                  bg-[#4b5568]
-                  text-white
-                  text-[10px]
-                  font-semibold
-                  hover:bg-[#3f4858]
+                  mt-4
+
+                  flex
+                  flex-col
+                  gap-3
+
+                  sm:flex-row
+                  sm:items-center
+                  sm:justify-between
                 "
               >
-                ⚙ إعداد تقرير مخصص
-              </button>
-            </div>
-          </section>
+                <p
+                  className="
+                    m-0
+
+                    text-[10px]
+                    text-[#64748B]
+                  "
+                >
+                  عرض{" "}
+                  {filteredReports.length
+                    ? (safePage -
+                        1) *
+                        pageSize +
+                      1
+                    : 0}
+                  {" - "}
+                  {Math.min(
+                    safePage *
+                      pageSize,
+                    filteredReports.length
+                  )}{" "}
+                  من{" "}
+                  {
+                    filteredReports.length
+                  }{" "}
+                  تقريرًا
+                </p>
+
+                <div
+                  className="
+                    flex
+                    flex-wrap
+                    items-center
+                    gap-2
+                  "
+                >
+                  <button
+                    type="button"
+                    disabled={
+                      safePage === 1
+                    }
+                    onClick={() =>
+                      setCurrentPage(
+                        (page) =>
+                          Math.max(
+                            1,
+                            page - 1
+                          )
+                      )
+                    }
+                    className="
+                      flex
+                      h-[34px]
+
+                      items-center
+                      gap-1
+
+                      rounded-full
+
+                      border
+                      border-[#E0E7F2]
+
+                      px-3
+
+                      text-[10px]
+
+                      disabled:opacity-40
+                    "
+                  >
+                    <ChevronRight
+                      size={13}
+                    />
+
+                    السابق
+                  </button>
+
+                  {Array.from(
+                    {
+                      length:
+                        totalPages,
+                    },
+                    (_, index) =>
+                      index + 1
+                  ).map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() =>
+                        setCurrentPage(
+                          page
+                        )
+                      }
+                      className={`
+                        h-[34px]
+                        min-w-[34px]
+
+                        rounded-full
+
+                        border
+
+                        text-[10px]
+
+                        ${
+                          page ===
+                          safePage
+                            ? `
+                                border-[#09379A]
+                                bg-[#09379A]
+                                text-white
+                              `
+                            : `
+                                border-[#E0E7F2]
+                                bg-white
+                              `
+                        }
+                      `}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    disabled={
+                      safePage ===
+                      totalPages
+                    }
+                    onClick={() =>
+                      setCurrentPage(
+                        (page) =>
+                          Math.min(
+                            totalPages,
+                            page + 1
+                          )
+                      )
+                    }
+                    className="
+                      flex
+                      h-[34px]
+
+                      items-center
+                      gap-1
+
+                      rounded-full
+
+                      border
+                      border-[#E0E7F2]
+
+                      px-3
+
+                      text-[10px]
+
+                      disabled:opacity-40
+                    "
+                  >
+                    التالي
+
+                    <ChevronLeft
+                      size={13}
+                    />
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* =============================================
+                FOOTER
+            ============================================== */}
+
+            <AcademicFooter audience="admin" />
+          </div>
         </main>
       </div>
     </div>
   );
 }
 
-function Filter({ label, children }) {
-  return (
-    <div>
-      <label className="block text-[11px] font-semibold text-[#3b4454] mb-[4px]">
-        {label}
-      </label>
+/* =========================================================
+   STATUS
+========================================================= */
 
-      <select
-        className="
-          w-full
-          h-[38px]
-          rounded-[8px]
-          border
-          border-[#c9cfd9]
-          bg-white
-          px-[10px]
-          outline-none
-          text-[11px]
-          text-[#4a5465]
-        "
-      >
-        {children}
-      </select>
-    </div>
-  );
-}
+function ReportStatus({
+  status,
+}) {
+  const config = {
+    pending: {
+      label: "بانتظار المراجعة",
 
-function Card({ title, children }) {
+      className:
+        "bg-[#FFE5D9] text-[#B54708]",
+    },
+
+    approved: {
+      label: "معتمد",
+
+      className:
+        "bg-[#DCFCE7] text-[#15803D]",
+    },
+
+    revision: {
+      label: "مطلوب تعديل",
+
+      className:
+        "bg-[#FEE2E2] text-[#DC2626]",
+    },
+  };
+
+  const current =
+    config[status];
+
   return (
-    <div
-      className="
-        border
-        border-[#dfe3ea]
-        rounded-[10px]
-        bg-white
-        px-[14px]
-        py-[11px]
-      "
+    <span
+      className={`
+        inline-flex
+        items-center
+        gap-[5px]
+
+        whitespace-nowrap
+
+        rounded-full
+
+        px-[10px]
+        py-[5px]
+
+        text-[9px]
+        font-semibold
+
+        ${current.className}
+      `}
     >
-      <h2 className="text-[14px] font-bold text-[#1f2733] mb-[8px]">
-        {title}
-      </h2>
+      <span
+        className="
+          h-[5px]
+          w-[5px]
 
-      {children}
-    </div>
+          rounded-full
+
+          bg-current
+        "
+      />
+
+      {current.label}
+    </span>
   );
 }
 
-function Legend({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-[10px]">
-      <div className="flex items-center gap-[7px]">
-        <span className="w-[7px] h-[7px] rounded-full bg-[#4b5568]" />
+/* =========================================================
+   SORT BUTTON
+========================================================= */
 
-        <span className="text-[10px] text-[#4a5465]">
-          {label}
-        </span>
-      </div>
-
-      <span className="text-[10px] font-semibold text-[#2b3340]">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function ExportButton({ text }) {
+function SortButton({
+  label,
+  active,
+  onClick,
+}) {
   return (
     <button
       type="button"
-      className="
+      onClick={onClick}
+      className={`
         w-full
-        h-[30px]
-        rounded-[6px]
-        border
-        border-[#b9c0cc]
-        bg-white
-        text-[9px]
-        text-[#3b4454]
-        hover:bg-[#eef0f4]
-      "
+
+        rounded-[7px]
+
+        px-3
+        py-2
+
+        text-right
+        text-[11px]
+
+        ${
+          active
+            ? `
+                bg-[#EEF4FF]
+                font-semibold
+                text-[#09379A]
+              `
+            : `
+                hover:bg-[#F8FAFC]
+              `
+        }
+      `}
     >
-      {text}
+      {label}
     </button>
   );
 }

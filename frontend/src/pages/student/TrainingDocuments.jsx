@@ -1,260 +1,1647 @@
+import { getApplicationDraft, getSelectedOpportunity, clearApplicationDraft } from "./studentApplicationDraft";
+import { submitStudentApplication } from "../training-provider/providerApplicationsStore";
+import { getActiveStudentId, getStudentApplicationEligibility } from "../../services/studentTrainingEligibility";
+import AcademicFooter from "../../components/shared/AcademicFooter";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import {
+  ArrowLeft,
+  ArrowRight,
+  Camera,
+  Check,
+  CheckCircle2,
+  FileText,
+  Image,
+  Mail,
+  Paperclip,
+  RefreshCw,
+  Upload,
+  XCircle,
+} from "lucide-react";
 
 import Header from "../../components/student/Header";
 import Sidebar from "../../components/student/Sidebar";
 
 export default function TrainingDocuments() {
   const navigate = useNavigate();
+  const [submissionError, setSubmissionError] = useState("");
 
-  const documents = [
-    {
-      title: "كشف علامات",
-      format: "(PDF)",
-      required: true,
+  /* =========================================================
+     INPUT REFS
+  ========================================================= */
+
+  const transcriptInputRef = useRef(null);
+  const idInputRef = useRef(null);
+  const photoInputRef = useRef(null);
+  const letterInputRef = useRef(null);
+  const cvInputRef = useRef(null);
+  const extraInputRef = useRef(null);
+
+  /* =========================================================
+     DOCUMENT STATES
+  ========================================================= */
+
+  const [documents, setDocuments] = useState({
+    transcript: {
+      uploaded: true,
+      fileName: "transcript_amal_2025.pdf",
+      size: "1.6 MB",
+      progress: 100,
+      error: "",
     },
-    {
-      title: "صورة عن الهوية",
-      format: "(PDF, JPG, PNG)",
-      required: true,
+
+    idCard: {
+      uploaded: true,
+      fileName: "national_id_card.pdf",
+      size: "550 KB",
+      progress: 100,
+      error: "",
     },
-    {
-      title: "صورة شخصية",
-      format: "(JPG, PNG)",
-      required: true,
+
+    photo: {
+      uploaded: false,
+      fileName: "",
+      size: "",
+      progress: 0,
+      error: "",
     },
-    {
-      title: "سيرة ذاتية",
-      format: "(PDF, DOC)",
-      optional: true,
+
+    recommendation: {
+      uploaded: false,
+      fileName: "",
+      size: "",
+      progress: 0,
+      error: "",
     },
-    {
-      title: "رسالة تحفيز",
-      format: "(PDF, DOC)",
-      optional: true,
+
+    cv: {
+      uploaded: false,
+      fileName: "",
+      size: "",
+      progress: 0,
+      error: "",
     },
-    {
-      title: "أي مستندات إضافية",
-      format: "(PDF, DOC)",
-      optional: true,
+
+    extra: {
+      uploaded: false,
+      fileName: "",
+      size: "",
+      progress: 0,
+      error: "",
     },
+  });
+
+  const [uploadingKey, setUploadingKey] =
+    useState(null);
+
+  /* =========================================================
+     ACCEPTED FILE TYPES
+  ========================================================= */
+
+  const acceptedTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ];
 
-  const handleFileChange = (e, documentTitle) => {
-    const file = e.target.files?.[0];
+  const maxFileSize =
+    5 * 1024 * 1024;
 
-    if (file) {
-      console.log(documentTitle, file);
+  /* =========================================================
+     FILE SIZE
+  ========================================================= */
+
+  const getFileSize = (bytes) => {
+    if (bytes < 1024) {
+      return `${bytes} B`;
     }
+
+    if (bytes < 1024 * 1024) {
+      return `${(
+        bytes / 1024
+      ).toFixed(0)} KB`;
+    }
+
+    return `${(
+      bytes /
+      (1024 * 1024)
+    ).toFixed(1)} MB`;
+  };
+
+  /* =========================================================
+     FILE VALIDATION
+  ========================================================= */
+
+  const validateFile = (
+    documentKey,
+    file
+  ) => {
+    const isPhoto =
+      documentKey === "photo";
+
+    if (
+      isPhoto &&
+      ![
+        "image/jpeg",
+        "image/png",
+      ].includes(file.type)
+    ) {
+      return "الصورة الشخصية يجب أن تكون بصيغة JPG أو PNG.";
+    }
+
+    if (
+      !isPhoto &&
+      !acceptedTypes.includes(file.type)
+    ) {
+      return "نوع الملف غير مدعوم. يرجى رفع PDF أو JPG أو PNG أو DOC.";
+    }
+
+    if (
+      file.size > maxFileSize
+    ) {
+      return "تجاوز حجم الملف الحد الأقصى المسموح به وهو 5 ميجابايت.";
+    }
+
+    return "";
+  };
+
+  /* =========================================================
+     FILE SELECT
+  ========================================================= */
+
+  const handleFileSelect = (
+    documentKey,
+    event
+  ) => {
+    const file =
+      event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const validationError =
+      validateFile(
+        documentKey,
+        file
+      );
+
+    if (validationError) {
+      setDocuments(
+        (previous) => ({
+          ...previous,
+
+          [documentKey]: {
+            uploaded: false,
+            fileName: file.name,
+            size: getFileSize(
+              file.size
+            ),
+            progress: 0,
+            error:
+              validationError,
+          },
+        })
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    setUploadingKey(
+      documentKey
+    );
+
+    setDocuments(
+      (previous) => ({
+        ...previous,
+
+        [documentKey]: {
+          uploaded: false,
+          fileName: file.name,
+          size: getFileSize(
+            file.size
+          ),
+          progress: 25,
+          error: "",
+        },
+      })
+    );
+
+    window.setTimeout(() => {
+      setDocuments(
+        (previous) => ({
+          ...previous,
+
+          [documentKey]: {
+            ...previous[
+              documentKey
+            ],
+
+            progress: 65,
+          },
+        })
+      );
+    }, 300);
+
+    window.setTimeout(() => {
+      setDocuments(
+        (previous) => ({
+          ...previous,
+
+          [documentKey]: {
+            ...previous[
+              documentKey
+            ],
+
+            progress: 88,
+          },
+        })
+      );
+    }, 600);
+
+    window.setTimeout(() => {
+      setDocuments(
+        (previous) => ({
+          ...previous,
+
+          [documentKey]: {
+            ...previous[
+              documentKey
+            ],
+
+            uploaded: true,
+            progress: 100,
+            error: "",
+          },
+        })
+      );
+
+      setUploadingKey(null);
+
+      event.target.value = "";
+    }, 950);
+  };
+
+  /* =========================================================
+     RESET ERROR / RETRY
+  ========================================================= */
+
+  const retryUpload = (
+    documentKey,
+    inputRef
+  ) => {
+    setDocuments(
+      (previous) => ({
+        ...previous,
+
+        [documentKey]: {
+          uploaded: false,
+          fileName: "",
+          size: "",
+          progress: 0,
+          error: "",
+        },
+      })
+    );
+
+    window.setTimeout(() => {
+      inputRef.current?.click();
+    }, 0);
+  };
+
+  /* =========================================================
+     REQUIRED DOCUMENTS
+  ========================================================= */
+
+  const requiredDocumentsComplete =
+    documents.transcript.uploaded &&
+    documents.idCard.uploaded &&
+    documents.photo.uploaded;
+
+  const isUploading =
+    uploadingKey !== null;
+
+  /* =========================================================
+     NEXT
+  ========================================================= */
+
+  const handleNext = () => {
+    const eligibility = getStudentApplicationEligibility(getActiveStudentId());
+    if (!eligibility.canApply) {
+      setSubmissionError(eligibility.reason);
+      return;
+    }
+    if (
+      !requiredDocumentsComplete ||
+      isUploading
+    ) {
+      return;
+    }
+
+    const result = submitStudentApplication(getApplicationDraft() || {}, getSelectedOpportunity());
+    if (!result.ok) {
+      setSubmissionError(result.message);
+      return;
+    }
+    clearApplicationDraft();
+    navigate("/student/applications");
+  };
+
+  /* =========================================================
+     DOCUMENT CARD
+  ========================================================= */
+
+  const DocumentCard = ({
+    title,
+    description,
+    documentKey,
+    inputRef,
+    icon: Icon,
+    required = false,
+    accept = ".pdf,.jpg,.jpeg,.png,.doc,.docx",
+  }) => {
+    const document =
+      documents[documentKey];
+
+    const hasProgress =
+      document.fileName &&
+      !document.uploaded &&
+      !document.error &&
+      document.progress > 0;
+
+    return (
+      <article
+        className="
+          flex
+          min-h-[148px]
+          min-w-0
+          flex-col
+          justify-between
+          rounded-[14px]
+          border
+          border-[#DCE4EF]
+          bg-white
+          p-4
+          transition
+
+          hover:border-[#B6C9EC]
+
+          sm:min-h-[154px]
+
+          xl:px-[16px]
+          xl:py-[15px]
+        "
+      >
+        {/* =====================================
+            CARD TOP
+        ====================================== */}
+        <div>
+          <div
+            className="
+              flex
+              items-start
+              justify-between
+              gap-3
+            "
+          >
+            <div
+              className="
+                min-w-0
+                text-right
+              "
+            >
+              <h3
+                className="
+                  m-0
+                  text-[13px]
+                  font-bold
+                  leading-[21px]
+                  text-[#1E293B]
+
+                  xl:text-[14px]
+                  xl:leading-[22px]
+                "
+              >
+                {title}
+
+                {required && (
+                  <span
+                    className="
+                      mr-[2px]
+                      text-[#DC2626]
+                    "
+                  >
+                    *
+                  </span>
+                )}
+              </h3>
+
+              <p
+                className="
+                  m-0
+                  mt-[3px]
+                  text-[9px]
+                  leading-[15px]
+                  text-[#94A3B8]
+
+                  xl:text-[10px]
+                  xl:leading-[16px]
+                "
+              >
+                {description}
+              </p>
+            </div>
+
+            <div
+              className="
+                flex
+                h-[38px]
+                w-[38px]
+                shrink-0
+                items-center
+                justify-center
+                rounded-[10px]
+                bg-[#F0F5FD]
+                text-[#8EA4C5]
+
+                sm:h-[40px]
+                sm:w-[40px]
+                sm:rounded-full
+              "
+            >
+              <Icon
+                size={19}
+                strokeWidth={1.7}
+              />
+            </div>
+          </div>
+
+          {/* =====================================
+              SUCCESS BADGE
+          ====================================== */}
+          {document.uploaded && (
+            <div className="mt-[7px]">
+              <span
+                className="
+                  inline-flex
+                  min-h-[22px]
+                  items-center
+                  gap-[5px]
+                  rounded-[10px]
+                  bg-[#E8FFF3]
+                  px-[8px]
+                  text-[9px]
+                  font-medium
+                  text-[#12A766]
+                "
+              >
+                <span
+                  className="
+                    h-[5px]
+                    w-[5px]
+                    rounded-full
+                    bg-[#10B981]
+                  "
+                />
+
+                تم الرفع بنجاح
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* =====================================
+            UPLOADED STATE
+        ====================================== */}
+        {document.uploaded ? (
+          <div
+            className="
+              mt-[10px]
+              flex
+              min-h-[42px]
+              min-w-0
+              items-center
+              justify-between
+              gap-[8px]
+              rounded-[7px]
+              border
+              border-[#D9E2EC]
+              bg-[#F8FAFC]
+              px-[10px]
+            "
+          >
+            <div
+              className="
+                flex
+                min-w-0
+                flex-1
+                items-center
+                gap-[7px]
+              "
+            >
+              <CheckCircle2
+                size={15}
+                strokeWidth={1.8}
+                className="
+                  shrink-0
+                  text-[#10B981]
+                "
+              />
+
+              <span
+                dir="ltr"
+                title={
+                  document.fileName
+                }
+                className="
+                  min-w-0
+                  truncate
+                  text-[9px]
+                  text-[#475569]
+
+                  xl:text-[10px]
+                "
+              >
+                {document.fileName}
+              </span>
+
+              <span
+                className="
+                  shrink-0
+                  whitespace-nowrap
+                  text-[8px]
+                  text-[#94A3B8]
+
+                  xl:text-[9px]
+                "
+              >
+                {document.size}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                inputRef.current?.click()
+              }
+              className="
+                shrink-0
+                cursor-pointer
+                border-0
+                bg-transparent
+                p-0
+                text-[9px]
+                font-bold
+                text-[#09379A]
+
+                hover:underline
+
+                xl:text-[10px]
+              "
+            >
+              استبدال
+            </button>
+          </div>
+        ) : document.error ? (
+          /* =====================================
+              ERROR STATE
+          ====================================== */
+          <div
+            className="
+              mt-[10px]
+              flex
+              min-h-[58px]
+              items-center
+              justify-between
+              gap-[10px]
+              rounded-[8px]
+              border
+              border-[#FDA4AF]
+              bg-[#FFF6F7]
+              px-[10px]
+              py-[7px]
+            "
+          >
+            <div className="min-w-0">
+              <div
+                className="
+                  flex
+                  min-w-0
+                  items-center
+                  gap-[6px]
+                "
+              >
+                <XCircle
+                  size={15}
+                  className="
+                    shrink-0
+                    text-[#DC2626]
+                  "
+                />
+
+                <span
+                  dir="ltr"
+                  className="
+                    min-w-0
+                    truncate
+                    text-[9px]
+                    font-bold
+                    text-[#DC2626]
+
+                    xl:text-[10px]
+                  "
+                >
+                  {document.fileName}
+                </span>
+              </div>
+
+              <p
+                className="
+                  m-0
+                  mt-[3px]
+                  text-[8px]
+                  leading-[14px]
+                  text-[#DC2626]
+                "
+              >
+                {document.error}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              aria-label="إعادة المحاولة"
+              onClick={() =>
+                retryUpload(
+                  documentKey,
+                  inputRef
+                )
+              }
+              className="
+                flex
+                h-[32px]
+                w-[32px]
+                shrink-0
+                cursor-pointer
+                items-center
+                justify-center
+                rounded-[7px]
+                border-0
+                bg-transparent
+                p-0
+                text-[#DC2626]
+                transition
+
+                hover:bg-[#FEE2E2]
+              "
+            >
+              <RefreshCw size={15} />
+            </button>
+          </div>
+        ) : hasProgress ? (
+          /* =====================================
+              UPLOADING STATE
+          ====================================== */
+          <div
+            className="
+              mt-[10px]
+              rounded-[8px]
+              border
+              border-[#09379A]
+              bg-white
+              px-[10px]
+              py-[8px]
+            "
+          >
+            <div
+              className="
+                flex
+                items-center
+                justify-between
+                gap-[10px]
+              "
+            >
+              <span
+                dir="ltr"
+                className="
+                  min-w-0
+                  truncate
+                  text-[9px]
+                  font-bold
+                  text-[#475569]
+
+                  xl:text-[10px]
+                "
+              >
+                {document.fileName}
+              </span>
+
+              <span
+                className="
+                  shrink-0
+                  text-[9px]
+                  font-bold
+                  text-[#09379A]
+                "
+              >
+                {document.progress}%
+              </span>
+            </div>
+
+            <div
+              className="
+                mt-[7px]
+                h-[6px]
+                w-full
+                overflow-hidden
+                rounded-full
+                bg-[#E8EEF7]
+              "
+            >
+              <div
+                className="
+                  h-full
+                  rounded-full
+                  bg-[#09379A]
+                  transition-all
+                  duration-300
+                "
+                style={{
+                  width: `${document.progress}%`,
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          /* =====================================
+              EMPTY STATE
+          ====================================== */
+          <button
+            type="button"
+            onClick={() =>
+              inputRef.current?.click()
+            }
+            className="
+              mt-[10px]
+              flex
+              h-[34px]
+              w-full
+              cursor-pointer
+              items-center
+              justify-center
+              gap-[6px]
+              rounded-[6px]
+              border
+              border-[#C9D5E6]
+              bg-white
+              text-[10px]
+              font-bold
+              text-[#09379A]
+              transition
+
+              hover:border-[#09379A]
+              hover:bg-[#F6F9FF]
+            "
+          >
+            <Upload
+              size={13}
+              strokeWidth={1.8}
+            />
+
+            رفع الملف
+          </button>
+        )}
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          onChange={(event) =>
+            handleFileSelect(
+              documentKey,
+              event
+            )
+          }
+          className="hidden"
+        />
+      </article>
+    );
   };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-white">
-      {/* ================= HEADER ================= */}
-      <Header />
+    <div
+      dir="rtl"
+      className="
+        flex
+        h-dvh
+        w-full
+        overflow-hidden
+        bg-[#F8FAFC]
+        font-['Cairo']
+        text-[#1E293B]
+      "
+    >
+      {/* =====================================================
+          SIDEBAR
+      ====================================================== */}
+      <Sidebar />
 
-      {/* ================= PAGE BODY ================= */}
-      <div className="flex">
+      {/* =====================================================
+          MAIN AREA
+      ====================================================== */}
+      <div
+        className="
+          flex
+          h-dvh
+          min-w-0
+          flex-1
+          flex-col
+          overflow-hidden
+          bg-[#F8FAFC]
+        "
+      >
+        {/* =====================================================
+            HEADER
+        ====================================================== */}
+        <div
+          className="
+            relative
+            shrink-0
+          "
+        >
+          <Header />
+        </div>
 
-        {/* ================= SIDEBAR ================= */}
-        <Sidebar />
+        {/* =====================================================
+            MAIN SCROLL
+        ====================================================== */}
+        <main
+          className="
+            min-h-0
+            flex-1
+            overflow-x-hidden
+            overflow-y-auto
+            bg-[#F8FAFC]
 
-        {/* ================= MAIN ================= */}
-        <main className="flex-1 px-[28px] pt-[15px] pb-8">
+            px-4
+            pb-8
+            pt-5
 
-          {/* ================= BREADCRUMB ================= */}
-          <div className="text-[8px] text-[#9aa3ae] mb-[11px]">
-            الرئيسية
-            <span className="mx-[5px]">‹</span>
-            فرص التدريب
-            <span className="mx-[5px]">‹</span>
-            رفع المستندات
-          </div>
+            sm:px-5
+            sm:pt-6
 
-          {/* ================= TITLE ================= */}
-          <div className="mb-[16px]">
-            <h1 className="text-[20px] font-bold text-[#293444] mb-[5px]">
-              استمارة التقديم على التدريب
-            </h1>
+            md:px-6
+            md:pt-7
 
-            <p className="text-[9px] text-[#8b95a2]">
-              يرجى رفع المستندات التالية بصيغة PDF أو صورة واضحة
-            </p>
-          </div>
+            xl:px-[40px]
+            xl:pb-[40px]
+            xl:pt-[14px]
+          "
+        >
+          <div
+            className="
+              mx-auto
+              w-full
+              max-w-[1080px]
+            "
+          >
+            {/* =================================================
+                BREADCRUMB
+            ================================================== */}
+            <nav
+              aria-label="مسار التنقل"
+              className="
+                mb-2
+                flex
+                flex-wrap
+                items-center
+                gap-[7px]
+                text-[11px]
+                font-medium
 
-          {/* ================= STEPS ================= */}
-          <div className="flex items-start justify-center mb-[20px]">
-            <div className="flex items-start w-[470px]">
+                sm:text-[12px]
 
-              {/* Step 1 */}
-              <div className="flex flex-col items-center min-w-[90px]">
-                <div className="w-[25px] h-[25px] rounded-full bg-[#505b70] text-white flex items-center justify-center text-[10px]">
-                  ✓
-                </div>
+                xl:mb-[5px]
+                xl:text-[13px]
+              "
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    "/student/dashboard"
+                  )
+                }
+                className="
+                  cursor-pointer
+                  border-0
+                  bg-transparent
+                  p-0
+                  text-[#64748B]
+                  transition
 
-                <span className="text-[8px] text-[#6f7a88] mt-[5px]">
-                  البيانات الأساسية
-                </span>
-              </div>
+                  hover:text-[#09379A]
+                "
+              >
+                الرئيسية
+              </button>
 
-              <div className="h-px bg-[#505b70] flex-1 mt-[12px]" />
+              <span
+                className="
+                  text-[#94A3B8]
+                "
+              >
+                ›
+              </span>
 
-              {/* Step 2 */}
-              <div className="flex flex-col items-center min-w-[80px]">
-                <div className="w-[25px] h-[25px] rounded-full bg-[#505b70] text-white flex items-center justify-center text-[9px] font-bold">
-                  2
-                </div>
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    "/student/opportunities"
+                  )
+                }
+                className="
+                  cursor-pointer
+                  border-0
+                  bg-transparent
+                  p-0
+                  font-bold
+                  text-[#09379A]
+                "
+              >
+                فرص التدريب
+              </button>
+            </nav>
 
-                <span className="text-[8px] text-[#293444] font-bold mt-[5px]">
-                  المستندات
-                </span>
-              </div>
+            {/* =================================================
+                PAGE TITLE
+            ================================================== */}
+            <section className="text-right">
+              <h1
+                className="
+                  m-0
+                  text-[23px]
+                  font-bold
+                  leading-[34px]
+                  text-[#14213D]
 
-              <div className="h-px bg-[#cdd3db] flex-1 mt-[12px]" />
+                  sm:text-[25px]
 
-              {/* Step 3 */}
-              <div className="flex flex-col items-center min-w-[80px]">
-                <div className="w-[25px] h-[25px] rounded-full border border-[#b8c0ca] bg-white text-[#7b8795] flex items-center justify-center text-[9px]">
-                  3
-                </div>
+                  xl:text-[28px]
+                  xl:leading-[40px]
+                "
+              >
+                استمارة التقديم على التدريب
+              </h1>
 
-                <span className="text-[8px] text-[#8b95a2] mt-[5px]">
-                  تأكيد الطلب
-                </span>
-              </div>
+              <p
+                className="
+                  m-0
+                  mt-[3px]
+                  max-w-[720px]
+                  text-[12px]
+                  leading-[21px]
+                  text-[#64748B]
 
-            </div>
-          </div>
+                  sm:text-[13px]
 
-          {/* ================= DOCUMENTS CARD ================= */}
-          <section className="border border-[#e0e3e7] rounded-[8px] bg-white px-[16px] py-[15px]">
+                  xl:mt-[4px]
+                  xl:text-[14px]
+                  xl:leading-[22px]
+                "
+              >
+                يرجى رفع المستندات التالية بصيغة PDF أو
+                صورة واضحة لإتمام مسوغات التدريب الميداني
+              </p>
+            </section>
 
-            <h2 className="text-[12px] font-bold text-[#293444] mb-[14px]">
-              المستندات المطلوبة
-            </h2>
+            {/* =================================================
+                STEPPER
+            ================================================== */}
+            <section
+              className="
+                mt-5
+                rounded-[14px]
+                border
+                border-[#E2E8F0]
+                bg-white
+                px-3
+                py-5
 
-            {/* Documents Grid */}
-            <div className="grid grid-cols-3 gap-[12px]">
+                sm:px-6
+                sm:py-6
 
-              {documents.map((document) => (
+                md:px-10
+
+                xl:mt-[18px]
+                xl:px-[50px]
+                xl:py-[28px]
+              "
+            >
+              <div className="relative">
+                {/* BASE LINE */}
                 <div
-                  key={document.title}
                   className="
-                    min-h-[128px]
-                    border
-                    border-[#e0e3e7]
-                    rounded-[7px]
-                    bg-white
-                    flex
-                    flex-col
-                    items-center
-                    justify-center
-                    text-center
-                    px-[12px]
-                    py-[12px]
+                    absolute
+                    left-[16%]
+                    right-[16%]
+                    top-[16px]
+                    h-[3px]
+                    bg-[#E2E8F0]
+
+                    sm:top-[18px]
+
+                    xl:left-[17%]
+                    xl:right-[17%]
+                    xl:top-[19px]
+                    xl:h-[4px]
+                  "
+                />
+
+                {/* COMPLETED LINE */}
+                <div
+                  className="
+                    absolute
+                    right-[16%]
+                    top-[16px]
+                    h-[3px]
+                    w-[34%]
+                    bg-[#09379A]
+
+                    sm:top-[18px]
+
+                    xl:right-[17%]
+                    xl:top-[19px]
+                    xl:h-[4px]
+                    xl:w-[33%]
+                  "
+                />
+
+                <div
+                  className="
+                    relative
+                    z-10
+                    grid
+                    grid-cols-3
                   "
                 >
-                  {/* File Icon */}
-                  <div className="text-[21px] text-[#8a96a6] mb-[8px]">
-                    ▤
-                  </div>
-
-                  {/* Document Name */}
-                  <h3 className="text-[9px] font-bold text-[#303846] mb-[4px]">
-                    {document.title}
-
-                    {document.optional && (
-                      <span className="font-normal text-[#8b95a2]">
-                        {" "}
-                        (اختياري)
-                      </span>
-                    )}
-                  </h3>
-
-                  {/* Format */}
-                  <p className="text-[7px] text-[#9aa3ae] mb-[9px]">
-                    {document.format}
-                  </p>
-
-                  {/* Upload */}
-                  <label
+                  {/* =============================================
+                      STEP 1 - COMPLETED
+                  ============================================== */}
+                  <div
                     className="
-                      h-[26px]
-                      px-[10px]
-                      border
-                      border-[#d7dce3]
-                      rounded-[5px]
-                      bg-white
                       flex
+                      min-w-0
+                      flex-col
                       items-center
-                      justify-center
-                      gap-[5px]
-                      text-[8px]
-                      text-[#4e5968]
-                      cursor-pointer
-                      hover:bg-[#f7f8fa]
-                      transition
+                      text-center
                     "
                   >
-                    <span>رفع الملف</span>
-                    <span>↥</span>
+                    <div
+                      className="
+                        flex
+                        h-[34px]
+                        w-[34px]
+                        items-center
+                        justify-center
+                        rounded-full
+                        bg-[#09379A]
+                        text-white
 
-                    <input
-                      type="file"
-                      className="hidden"
-                      onChange={(e) =>
-                        handleFileChange(e, document.title)
-                      }
-                    />
-                  </label>
+                        sm:h-[38px]
+                        sm:w-[38px]
+
+                        xl:h-[40px]
+                        xl:w-[40px]
+                      "
+                    >
+                      <Check
+                        size={18}
+                        strokeWidth={2.2}
+                      />
+                    </div>
+
+                    <h3
+                      className="
+                        m-0
+                        mt-[7px]
+                        text-[10px]
+                        font-bold
+                        leading-[16px]
+                        text-[#1E293B]
+
+                        sm:text-[11px]
+
+                        xl:text-[13px]
+                      "
+                    >
+                      البيانات الأساسية
+                    </h3>
+
+                    <span
+                      className="
+                        mt-[2px]
+                        hidden
+                        text-[8px]
+                        font-medium
+                        text-[#10B981]
+
+                        sm:block
+                        sm:text-[9px]
+                      "
+                    >
+                      تم الاكتمال
+                    </span>
+                  </div>
+
+                  {/* =============================================
+                      STEP 2 - ACTIVE
+                  ============================================== */}
+                  <div
+                    className="
+                      flex
+                      min-w-0
+                      flex-col
+                      items-center
+                      text-center
+                    "
+                  >
+                    <div
+                      className="
+                        flex
+                        h-[34px]
+                        w-[34px]
+                        items-center
+                        justify-center
+                        rounded-full
+                        bg-[#09379A]
+                        text-[12px]
+                        font-bold
+                        text-white
+                        shadow-[0_0_0_4px_#E7EFFF]
+
+                        sm:h-[38px]
+                        sm:w-[38px]
+                        sm:text-[13px]
+
+                        xl:h-[40px]
+                        xl:w-[40px]
+                        xl:text-[14px]
+                      "
+                    >
+                      2
+                    </div>
+
+                    <h3
+                      className="
+                        m-0
+                        mt-[7px]
+                        text-[10px]
+                        font-bold
+                        leading-[16px]
+                        text-[#09379A]
+
+                        sm:text-[11px]
+
+                        xl:text-[13px]
+                      "
+                    >
+                      المستندات
+                    </h3>
+
+                    <span
+                      className="
+                        mt-[3px]
+                        inline-flex
+                        min-h-[18px]
+                        items-center
+                        rounded-[5px]
+                        bg-[#EFF4FF]
+                        px-[6px]
+                        text-[8px]
+                        font-bold
+                        leading-[14px]
+                        text-[#09379A]
+
+                        sm:px-[7px]
+                        sm:text-[9px]
+                      "
+                    >
+                      الخطوة الحالية
+                    </span>
+                  </div>
+
+                  {/* =============================================
+                      STEP 3
+                  ============================================== */}
+                  <div
+                    className="
+                      flex
+                      min-w-0
+                      flex-col
+                      items-center
+                      text-center
+                    "
+                  >
+                    <div
+                      className="
+                        flex
+                        h-[34px]
+                        w-[34px]
+                        items-center
+                        justify-center
+                        rounded-full
+                        border-2
+                        border-[#CBD5E1]
+                        bg-white
+                        text-[12px]
+                        font-bold
+                        text-[#94A3B8]
+
+                        sm:h-[38px]
+                        sm:w-[38px]
+                        sm:text-[13px]
+
+                        xl:h-[40px]
+                        xl:w-[40px]
+                        xl:text-[14px]
+                      "
+                    >
+                      3
+                    </div>
+
+                    <h3
+                      className="
+                        m-0
+                        mt-[7px]
+                        text-[10px]
+                        font-bold
+                        leading-[16px]
+                        text-[#64748B]
+
+                        sm:text-[11px]
+
+                        xl:text-[13px]
+                      "
+                    >
+                      تأكيد الطلب
+                    </h3>
+
+                    <span
+                      className="
+                        mt-[2px]
+                        hidden
+                        text-[8px]
+                        text-[#94A3B8]
+
+                        sm:block
+                        sm:text-[9px]
+                      "
+                    >
+                      المراجعة والإرسال
+                    </span>
+                  </div>
                 </div>
-              ))}
+              </div>
+            </section>
 
-            </div>
-
-          </section>
-
-          {/* ================= ACTIONS ================= */}
-          <div className="flex items-center justify-between mt-[14px]">
-
-            {/* Next */}
-            <button
-              type="button"
-              onClick={() => navigate("/applications/status")}
+            {/* =================================================
+                DOCUMENTS HEADER
+            ================================================== */}
+            <section
               className="
-                h-[33px]
-                px-[17px]
-                rounded-[5px]
-                bg-[#505b70]
-                text-white
-                text-[9px]
-                font-bold
-                hover:bg-[#414b5f]
-                transition
+                mt-4
+                flex
+                flex-col
+                gap-3
+
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+
+                xl:mt-[14px]
               "
             >
-              التالي
-              <span className="mr-[6px]">←</span>
-            </button>
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-[8px]
+                "
+              >
+                <span
+                  className="
+                    h-[23px]
+                    w-[4px]
+                    shrink-0
+                    rounded-full
+                    bg-[#09379A]
 
-            {/* Back */}
-            <button
-              type="button"
-              onClick={() => navigate("/apply-training")}
+                    xl:h-[24px]
+                  "
+                />
+
+                <h2
+                  className="
+                    m-0
+                    text-[15px]
+                    font-bold
+                    text-[#1E293B]
+
+                    sm:text-[16px]
+
+                    xl:text-[17px]
+                  "
+                >
+                  المستندات المطلوبة
+                </h2>
+              </div>
+
+              <div
+                className="
+                  flex
+                  min-h-[26px]
+                  w-fit
+                  max-w-full
+                  items-center
+                  rounded-[13px]
+                  bg-[#F3F6FA]
+                  px-[10px]
+                  text-[8px]
+                  leading-[15px]
+                  text-[#64748B]
+
+                  sm:px-[11px]
+                  sm:text-[9px]
+                "
+              >
+                الحد الأقصى لحجم الملف: 5 ميجابايت -
+                الصيغ المقبولة: PDF, JPG, PNG, DOC
+              </div>
+            </section>
+
+            {/* =================================================
+                DOCUMENTS GRID
+            ================================================== */}
+            <section
               className="
-                text-[9px]
-                text-[#566273]
-                underline
-                underline-offset-2
-                hover:text-[#293444]
-                transition
+                mt-3
+                grid
+                grid-cols-1
+                gap-3
+
+                sm:grid-cols-2
+
+                xl:grid-cols-3
+                xl:gap-[14px]
               "
             >
-              العودة إلى البيانات الأساسية
-            </button>
+              <DocumentCard
+                title="كشف علامات حديث"
+                description="إلزامي - PDF"
+                documentKey="transcript"
+                inputRef={
+                  transcriptInputRef
+                }
+                icon={FileText}
+                required
+                accept=".pdf"
+              />
 
+              <DocumentCard
+                title="صورة عن الهوية"
+                description="PDF, JPG, PNG - سارية"
+                documentKey="idCard"
+                inputRef={idInputRef}
+                icon={FileText}
+                required
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+
+              <DocumentCard
+                title="صورة شخصية رسمية"
+                description="يفضل بخلفية رسمية - JPG, PNG"
+                documentKey="photo"
+                inputRef={photoInputRef}
+                icon={Camera}
+                required
+                accept=".jpg,.jpeg,.png"
+              />
+
+              <DocumentCard
+                title="رسالة تحفيزية للجهة"
+                description="اختياري - PDF, DOC"
+                documentKey="recommendation"
+                inputRef={letterInputRef}
+                icon={Mail}
+                accept=".pdf,.doc,.docx"
+              />
+
+              <DocumentCard
+                title="سيرة ذاتية محدثة"
+                description="اختياري - PDF, DOC"
+                documentKey="cv"
+                inputRef={cvInputRef}
+                icon={Image}
+                accept=".pdf,.doc,.docx"
+              />
+
+              <DocumentCard
+                title="أي مستندات إضافية"
+                description="شهادات، دورات - اختياري"
+                documentKey="extra"
+                inputRef={extraInputRef}
+                icon={Paperclip}
+              />
+            </section>
+
+            {/* =================================================
+                INFO MESSAGE
+            ================================================== */}
+            <section
+              className="
+                mt-4
+                flex
+                min-h-[42px]
+                items-start
+                gap-[8px]
+                rounded-[9px]
+                border
+                border-[#BFD6FF]
+                bg-[#F2F7FF]
+                px-3
+                py-[10px]
+                text-[9px]
+                leading-[17px]
+                text-[#64748B]
+
+                sm:items-center
+                sm:px-4
+                sm:text-[10px]
+                sm:leading-[18px]
+              "
+            >
+              <CheckCircle2
+                size={16}
+                strokeWidth={1.7}
+                className="
+                  mt-[1px]
+                  shrink-0
+                  text-[#09379A]
+
+                  sm:mt-0
+                "
+              />
+
+              <span>
+                تم تدقيق المستندات المرفوعة من قبل وحدة
+                التدريب الميداني بالكلية قبل إرسال ملف
+                الترشيح للمؤسسة الشريكة، يرجى التأكد من
+                وضوح الأختام الرسمية في كشف العلامات.
+              </span>
+            </section>
+
+            {/* =================================================
+                REQUIRED MESSAGE
+            ================================================== */}
+            {!requiredDocumentsComplete && (
+              <p
+                className="
+                  m-0
+                  mt-3
+                  text-[10px]
+                  font-medium
+                  text-[#64748B]
+                "
+              >
+                يجب رفع جميع المستندات الإلزامية قبل
+                الانتقال إلى تأكيد الطلب.
+              </p>
+            )}
+
+            {/* =================================================
+                ACTIONS
+            ================================================== */}
+            <section
+              className="
+                mt-5
+                flex
+                flex-col
+                gap-3
+
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+
+                xl:mt-[20px]
+              "
+            >
+              <button
+                type="button"
+                disabled={
+                  !requiredDocumentsComplete ||
+                  isUploading
+                }
+                onClick={handleNext}
+                className={`
+                  order-1
+                  flex
+                  h-[44px]
+                  w-full
+                  items-center
+                  justify-center
+                  gap-[8px]
+                  rounded-[9px]
+                  border-0
+                  px-[20px]
+                  text-[12px]
+                  font-bold
+                  transition
+
+                  sm:w-auto
+                  sm:min-w-[220px]
+
+                  xl:text-[13px]
+
+                  ${
+                    requiredDocumentsComplete &&
+                    !isUploading
+                      ? `
+                        cursor-pointer
+                        bg-[#09379A]
+                        text-white
+                        shadow-[0_3px_7px_rgba(9,55,154,0.18)]
+
+                        hover:bg-[#072E81]
+                      `
+                      : `
+                        cursor-not-allowed
+                        bg-[#CBD5E1]
+                        text-white
+                      `
+                  }
+                `}
+              >
+                <span>
+                  التالي: تأكيد ومراجعة الطلب
+                </span>
+
+                <ArrowLeft
+                  size={17}
+                  strokeWidth={1.8}
+                />
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    "/student/apply-training"
+                  )
+                }
+                className="
+                  order-2
+                  flex
+                  h-[40px]
+                  w-full
+                  cursor-pointer
+                  items-center
+                  justify-center
+                  gap-[7px]
+                  rounded-[8px]
+                  border
+                  border-[#D7DEE9]
+                  bg-white
+                  px-[16px]
+                  text-[11px]
+                  font-bold
+                  text-[#09379A]
+                  transition
+
+                  hover:bg-[#F8FAFC]
+
+                  sm:w-auto
+                  sm:h-[38px]
+                "
+              >
+                <ArrowRight
+                  size={15}
+                  strokeWidth={1.8}
+                />
+
+                العودة إلى البيانات الأساسية
+              </button>
+            </section>
           </div>
-
-        </main>
+        
+            {submissionError && <div role="alert" className="my-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{submissionError}</div>}
+            <AcademicFooter audience="student" />
+          </main>
       </div>
     </div>
   );

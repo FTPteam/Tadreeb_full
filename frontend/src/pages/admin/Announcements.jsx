@@ -1,514 +1,764 @@
-import { useState } from "react";
+import AcademicFooter from "../../components/shared/AcademicFooter";
+import AdminHeader from "../../components/admin/Header";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import Header from "../../components/admin/Header";
+import {
+  Bell,
+  ChevronLeft,
+  CheckCheck,
+  FileCheck,
+  FileText,
+  CheckCircle2,
+  AlertTriangle,
+  Clock3,
+} from "lucide-react";
+
 import Sidebar from "../../components/admin/Sidebar";
 
+/* =========================================================
+   NOTIFICATIONS DATA
+========================================================= */
+
+const INITIAL_NOTIFICATIONS = [
+  {
+    id: 1,
+    type: "requests",
+    title: "طلب تدريب جديد",
+    description:
+      "قدمت الطالبة هدى شهير طلبًا جديدًا في استوديو بيكسل",
+    time: "منذ 10 دقائق",
+    badge: "طلب",
+    read: false,
+    icon: FileCheck,
+    iconClass: "bg-[#FFE5D9] text-[#B54708]",
+  },
+  {
+    id: 2,
+    type: "reports",
+    title: "تقرير يحتاج مراجعة",
+    description:
+      "أرسلت أمل أحمد تقرير الأسبوع 3",
+    time: "منذ ساعة",
+    badge: "تقرير",
+    read: false,
+    icon: FileText,
+    iconClass: "bg-[#E8EEF9] text-[#09379A]",
+  },
+  {
+    id: 3,
+    type: "completed",
+    title: "انتهى التدريب",
+    description:
+      "أنهى الطالب أنس البيطار فترة التدريب بنجاح",
+    time: "أمس",
+    badge: "تدريب",
+    read: true,
+    icon: CheckCircle2,
+    iconClass: "bg-[#DCFCE7] text-[#15803D]",
+  },
+  {
+    id: 4,
+    type: "alerts",
+    title: "تنبيه مهم",
+    description:
+      "3 طلاب متأخرون في تسليم التقرير الأسبوعي",
+    time: "أمس",
+    badge: "تنبيه",
+    read: true,
+    icon: AlertTriangle,
+    iconClass: "bg-[#FFE5D9] text-[#B54708]",
+  },
+  {
+    id: 5,
+    type: "requests",
+    title: "طلب تدريب جديد",
+    description:
+      "قدم الطالب محمود رضوان طلب تدريب جديد",
+    time: "منذ يومين",
+    badge: "طلب",
+    read: true,
+    icon: FileCheck,
+    iconClass: "bg-[#FFE5D9] text-[#B54708]",
+  },
+  {
+    id: 6,
+    type: "reports",
+    title: "تقرير أسبوعي جديد",
+    description:
+      "تم إرسال تقرير أسبوعي جديد من سارة عبد الرحمن",
+    time: "منذ يومين",
+    badge: "تقرير",
+    read: true,
+    icon: FileText,
+    iconClass: "bg-[#E8EEF9] text-[#09379A]",
+  },
+  {
+    id: 7,
+    type: "completed",
+    title: "اكتمال فترة التدريب",
+    description:
+      "أكملت نور خليل جميع الساعات التدريبية المطلوبة",
+    time: "منذ 3 أيام",
+    badge: "تدريب",
+    read: true,
+    icon: CheckCircle2,
+    iconClass: "bg-[#DCFCE7] text-[#15803D]",
+  },
+  {
+    id: 8,
+    type: "alerts",
+    title: "اقتراب موعد تسليم",
+    description:
+      "موعد تسليم التقارير الأسبوعية خلال يومين",
+    time: "منذ 3 أيام",
+    badge: "تنبيه",
+    read: true,
+    icon: Clock3,
+    iconClass: "bg-[#DDF6FF] text-[#08759B]",
+  },
+];
+
+/* =========================================================
+   FILTERS
+========================================================= */
+
+const FILTERS = [
+  {
+    id: "all",
+    label: "الكل",
+  },
+  {
+    id: "requests",
+    label: "طلبات جديدة",
+  },
+  {
+    id: "reports",
+    label: "تقارير",
+  },
+  {
+    id: "completed",
+    label: "تدريبات منتهية",
+  },
+  {
+    id: "alerts",
+    label: "تنبيهات",
+  },
+];
+
+/* =========================================================
+   PAGE
+========================================================= */
+
 export default function Announcements() {
-  const [formData, setFormData] = useState({
-    title: "",
-    type: "إعلان عام",
-    target: "جميع الطلبة",
-    content: "",
-    publishDate: "",
-    endDate: "",
-    platformNotification: true,
-    emailNotification: true,
-  });
+  const navigate = useNavigate();
 
-  const announcements = [
-    {
-      title: "فتح التسجيل للتدريب الميداني",
-      target: "طلبة هندسة",
-      date: "2026/06/01",
-      status: "منشور",
-      action: "عرض",
-    },
-    {
-      title: "موعد تسليم التقرير النهائي",
-      target: "المتدربون",
-      date: "2026/08/25",
-      status: "منشور",
-      action: "عرض",
-    },
-    {
-      title: "زيارة المتابعة",
-      target: "المشرفون",
-      date: "2026/08/10",
-      status: "مجدول",
-      action: "تعديل",
-    },
-    {
-      title: "تحديث بيانات جهات التدريب",
-      target: "جهات التدريب",
-      date: "2026/09/05",
-      status: "منشور",
-      action: "عرض",
-    },
-    {
-      title: "إغلاق باب التسجيل",
-      target: "جميع الطلبة",
-      date: "2026/08/20",
-      status: "منشور",
-      action: "عرض",
-    },
-  ];
+  const [notifications, setNotifications] =
+    useState(INITIAL_NOTIFICATIONS);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const [activeFilter, setActiveFilter] =
+    useState("all");
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
+  /* =======================================================
+     FILTERED NOTIFICATIONS
+  ======================================================= */
 
-  const getStatusStyle = (status) => {
-    if (status === "منشور") {
-      return "bg-[#dff1e6] text-[#236a45]";
+  const filteredNotifications = useMemo(() => {
+    if (activeFilter === "all") {
+      return notifications;
     }
 
-    return "bg-[#fff1cc] text-[#8a6515]";
+    return notifications.filter(
+      (notification) =>
+        notification.type === activeFilter
+    );
+  }, [notifications, activeFilter]);
+
+  /* =======================================================
+     UNREAD
+  ======================================================= */
+
+  const unreadCount = notifications.filter(
+    (notification) => !notification.read
+  ).length;
+
+  /* =======================================================
+     ACTIONS
+  ======================================================= */
+
+  const markAllAsRead = () => {
+    setNotifications((previous) =>
+      previous.map((notification) => ({
+        ...notification,
+        read: true,
+      }))
+    );
   };
 
+  const markAsRead = (id) => {
+    setNotifications((previous) =>
+      previous.map((notification) =>
+        notification.id === id
+          ? {
+              ...notification,
+              read: true,
+            }
+          : notification
+      )
+    );
+  };
+
+  const handleNotification = (notification) => {
+    markAsRead(notification.id);
+
+    if (notification.type === "requests") {
+      navigate("/admin/training-requests");
+      return;
+    }
+
+    if (notification.type === "reports") {
+      navigate("/admin/reports");
+      return;
+    }
+
+    if (notification.type === "completed") {
+      navigate("/admin/training-monitoring");
+      return;
+    }
+
+    if (notification.type === "alerts") {
+      navigate("/admin/reports");
+    }
+  };
+
+  /* =======================================================
+     MOBILE SIDEBAR
+  ======================================================= */
+
   return (
-    <div dir="rtl" className="min-h-screen bg-white">
-      <Header />
+    <div
+      dir="rtl"
+      className="
+        flex
+        h-screen
+        w-full
+        overflow-hidden
 
-      <div className="flex">
-        <Sidebar />
+        bg-[#F8FAFC]
 
-        <main className="flex-1 min-w-0 px-[24px] pt-[14px] pb-[20px]">
-          {/* ================= HEADER ================= */}
-          <div className="flex items-start justify-between mb-[10px]">
-            <div>
-              <div className="flex items-center gap-[6px] text-[11px] text-[#7a8393] mb-[2px]">
-                <span>الرئيسية</span>
-                <span>›</span>
-                <span>الإعلانات والإشعارات</span>
-              </div>
+        font-['Cairo']
+        text-[#111C2D]
+      "
+    >
+      {/* =====================================================
+          SIDEBAR
+      ====================================================== */}
 
-              <h1 className="text-[23px] font-bold text-[#1b2430]">
-                الإعلانات والإشعارات
-              </h1>
-            </div>
+      <Sidebar />
 
-            <button
-              type="button"
+      {/* =====================================================
+          PAGE
+      ====================================================== */}
+
+      <div
+        className="
+          flex
+          h-screen
+          min-w-0
+          flex-1
+          flex-col
+          overflow-hidden
+        "
+      >
+        {/* =================================================
+            HEADER
+        ================================================== */}
+
+        <AdminHeader />
+
+        {/* =================================================
+            CONTENT - ONLY THIS AREA SCROLLS
+        ================================================== */}
+
+        <main
+          className="
+            w-full
+            min-w-0
+            flex-1
+
+            overflow-x-hidden
+            overflow-y-auto
+
+            px-4
+            pb-8
+            pt-5
+
+            sm:px-6
+            lg:px-8
+          "
+        >
+          <div
+            className="
+              mx-auto
+              w-full
+              max-w-[1450px]
+            "
+          >
+            {/* =============================================
+                BREADCRUMB
+            ============================================== */}
+
+            <div
               className="
-                h-[34px]
-                px-[15px]
-                rounded-[7px]
-                bg-[#4b5568]
-                text-white
-                text-[11px]
-                font-semibold
-                hover:bg-[#3f4858]
+                mb-3
+
+                flex
+                items-center
+                gap-2
+
+                text-[12px]
+                text-[#64748B]
               "
             >
-              + إنشاء إعلان
-            </button>
-          </div>
-
-          {/* ================= MAIN CONTENT ================= */}
-          <div className="flex gap-[14px] mt-[8px]">
-            {/* ================= PREVIOUS ANNOUNCEMENTS ================= */}
-            <section
-              className="
-                flex-1
-                min-w-0
-                border
-                border-[#dfe3ea]
-                rounded-[10px]
-                bg-white
-                overflow-hidden
-              "
-            >
-              <div className="px-[14px] py-[10px]">
-                <h2 className="text-[15px] font-bold text-[#1f2733]">
-                  الإعلانات السابقة
-                </h2>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-right">
-                  <thead className="bg-[#f1f3f7]">
-                    <tr>
-                      {[
-                        "العنوان",
-                        "المستهدفون",
-                        "تاريخ النشر",
-                        "الحالة",
-                        "الإجراءات",
-                      ].map((heading) => (
-                        <th
-                          key={heading}
-                          className="
-                            px-[10px]
-                            py-[8px]
-                            text-[10px]
-                            font-semibold
-                            text-[#3b4454]
-                            border-b
-                            border-[#dfe3ea]
-                            whitespace-nowrap
-                          "
-                        >
-                          {heading}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {announcements.map((item, index) => (
-                      <tr
-                        key={index}
-                        className="border-b border-[#eceff4] last:border-b-0"
-                      >
-                        <td className="px-[10px] py-[10px] text-[10px] font-semibold text-[#2b3340]">
-                          {item.title}
-                        </td>
-
-                        <td className="px-[10px] py-[10px] text-[10px] text-[#4a5465]">
-                          {item.target}
-                        </td>
-
-                        <td className="px-[10px] py-[10px] text-[10px] text-[#667085]">
-                          {item.date}
-                        </td>
-
-                        <td className="px-[10px] py-[10px]">
-                          <span
-                            className={`
-                              inline-flex
-                              px-[9px]
-                              py-[3px]
-                              rounded-full
-                              text-[9px]
-                              font-medium
-                              ${getStatusStyle(item.status)}
-                            `}
-                          >
-                            {item.status}
-                          </span>
-                        </td>
-
-                        <td className="px-[10px] py-[10px]">
-                          <button
-                            type="button"
-                            className="
-                              h-[27px]
-                              px-[10px]
-                              rounded-[6px]
-                              border
-                              border-[#b9c0cc]
-                              bg-white
-                              text-[9px]
-                              text-[#3b4454]
-                              hover:bg-[#eef0f4]
-                            "
-                          >
-                            {item.action}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="px-[14px] py-[10px] text-[10px] text-[#667085]">
-                إجمالي الإعلانات: 5
-              </div>
-            </section>
-
-            {/* ================= CREATE ANNOUNCEMENT ================= */}
-            <aside className="w-[470px] shrink-0">
-              <section
+              <button
+                type="button"
+                onClick={() =>
+                  navigate("/admin/dashboard")
+                }
                 className="
-                  border
-                  border-[#dfe3ea]
-                  rounded-[10px]
-                  bg-white
-                  px-[14px]
-                  py-[12px]
+                  hover:text-[#09379A]
                 "
               >
-                <h2 className="text-[15px] font-bold text-[#1f2733] mb-[10px]">
-                  إنشاء إعلان
-                </h2>
+                الرئيسية
+              </button>
 
-                <div className="grid gap-[10px]">
-                  {/* Title */}
-                  <div>
-                    <label className="block text-[10px] font-semibold text-[#3b4454] mb-[4px]">
-                      عنوان الإعلان *
-                    </label>
+              <ChevronLeft size={15} />
 
-                    <input
-                      type="text"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleChange}
-                      placeholder="أدخل عنوان الإعلان هنا ..."
-                      className="
-                        w-full
-                        h-[38px]
-                        rounded-[8px]
-                        border
-                        border-[#c9cfd9]
-                        bg-white
-                        px-[10px]
-                        outline-none
-                        text-[11px]
-                        text-[#2b3340]
-                        placeholder:text-[#8a93a3]
-                      "
-                    />
-                  </div>
+              <span
+                className="
+                  font-semibold
+                  text-[#111C2D]
+                "
+              >
+                الإشعارات
+              </span>
+            </div>
 
-                  {/* Type */}
-                  <div>
-                    <span className="block text-[10px] font-semibold text-[#3b4454] mb-[6px]">
-                      نوع الإعلان *
-                    </span>
+            {/* =============================================
+                TITLE
+            ============================================== */}
 
-                    <div className="flex gap-[20px]">
-                      {["إعلان عام", "تنبيه", "تذكير"].map((type) => (
-                        <label
-                          key={type}
-                          className="flex items-center gap-[7px] text-[10px] text-[#3b4454] cursor-pointer"
-                        >
-                          <input
-                            type="radio"
-                            name="type"
-                            value={type}
-                            checked={formData.type === type}
-                            onChange={handleChange}
-                            className="accent-[#4b5568]"
-                          />
+            <section
+              className="
+                mb-6
 
-                          {type}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+                flex
+                flex-col
+                gap-4
 
-                  {/* Target */}
-                  <div>
-                    <span className="block text-[10px] font-semibold text-[#3b4454] mb-[6px]">
-                      المستهدفون *
-                    </span>
-
-                    <div
-                      className="
-                        border
-                        border-[#dfe3ea]
-                        rounded-[8px]
-                        bg-[#fbfcfd]
-                        px-[12px]
-                        py-[10px]
-                        grid
-                        grid-cols-2
-                        gap-[8px]
-                      "
-                    >
-                      {[
-                        "جميع الطلبة",
-                        "تخصص محدد",
-                        "المشرفون",
-                        "كلية / قسم",
-                        "جهات تدريب",
-                      ].map((target) => (
-                        <label
-                          key={target}
-                          className="flex items-center gap-[7px] text-[10px] text-[#3b4454] cursor-pointer"
-                        >
-                          <input
-                            type="radio"
-                            name="target"
-                            value={target}
-                            checked={formData.target === target}
-                            onChange={handleChange}
-                            className="accent-[#4b5568]"
-                          />
-
-                          {target}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div>
-                    <label className="block text-[10px] font-semibold text-[#3b4454] mb-[4px]">
-                      محتوى الإعلان *
-                    </label>
-
-                    <textarea
-                      name="content"
-                      value={formData.content}
-                      onChange={handleChange}
-                      placeholder="اكتب محتوى الإعلان هنا ..."
-                      className="
-                        w-full
-                        min-h-[105px]
-                        resize-none
-                        rounded-[8px]
-                        border
-                        border-[#c9cfd9]
-                        bg-white
-                        px-[10px]
-                        py-[9px]
-                        outline-none
-                        text-[11px]
-                        text-[#2b3340]
-                        placeholder:text-[#8a93a3]
-                      "
-                    />
-                  </div>
-
-                  {/* Dates */}
-                  <div className="grid grid-cols-2 gap-[10px]">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-[#3b4454] mb-[4px]">
-                        تاريخ النشر *
-                      </label>
-
-                      <input
-                        type="datetime-local"
-                        name="publishDate"
-                        value={formData.publishDate}
-                        onChange={handleChange}
-                        className="
-                          w-full
-                          h-[38px]
-                          rounded-[8px]
-                          border
-                          border-[#c9cfd9]
-                          bg-white
-                          px-[10px]
-                          outline-none
-                          text-[10px]
-                          text-[#4a5465]
-                        "
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-semibold text-[#3b4454] mb-[4px]">
-                        تاريخ الانتهاء (اختياري)
-                      </label>
-
-                      <input
-                        type="datetime-local"
-                        name="endDate"
-                        value={formData.endDate}
-                        onChange={handleChange}
-                        className="
-                          w-full
-                          h-[38px]
-                          rounded-[8px]
-                          border
-                          border-[#c9cfd9]
-                          bg-white
-                          px-[10px]
-                          outline-none
-                          text-[10px]
-                          text-[#4a5465]
-                        "
-                      />
-                    </div>
-                  </div>
-
-                  {/* Notification Options */}
-                  <div>
-                    <span className="block text-[10px] font-semibold text-[#3b4454] mb-[6px]">
-                      خيارات الإشعار
-                    </span>
-
-                    <div className="flex gap-[24px]">
-                      <label className="flex items-center gap-[8px] text-[10px] text-[#3b4454] cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name="platformNotification"
-                          checked={formData.platformNotification}
-                          onChange={handleChange}
-                          className="accent-[#4b5568]"
-                        />
-
-                        إشعار داخل المنصة
-                      </label>
-
-                      <label className="flex items-center gap-[8px] text-[10px] text-[#3b4454] cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name="emailNotification"
-                          checked={formData.emailNotification}
-                          onChange={handleChange}
-                          className="accent-[#4b5568]"
-                        />
-
-                        إرسال عبر البريد الإلكتروني
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-[8px] mt-[10px]">
-                <button
-                  type="button"
+                sm:flex-row
+                sm:items-start
+                sm:justify-between
+              "
+            >
+              <div>
+                <h1
                   className="
-                    h-[34px]
-                    px-[15px]
-                    rounded-[7px]
-                    bg-[#4b5568]
-                    text-white
-                    text-[10px]
-                    font-semibold
-                    hover:bg-[#3f4858]
+                    m-0
+
+                    text-[24px]
+                    font-bold
+                    leading-9
+
+                    text-[#111C2D]
+
+                    sm:text-[27px]
                   "
                 >
-                  نشر الإعلان
-                </button>
+                  الإشعارات
+                </h1>
 
-                <button
-                  type="button"
+                <p
                   className="
-                    h-[34px]
-                    px-[15px]
-                    rounded-[7px]
-                    border
-                    border-[#b9c0cc]
-                    bg-white
-                    text-[10px]
-                    text-[#3b4454]
-                    hover:bg-[#eef0f4]
+                    m-0
+                    mt-1
+
+                    text-[13px]
+                    leading-6
+
+                    text-[#64748B]
                   "
                 >
-                  حفظ كمسودة
-                </button>
-
-                <button
-                  type="button"
-                  className="
-                    h-[34px]
-                    px-[15px]
-                    rounded-[7px]
-                    border
-                    border-[#b9c0cc]
-                    bg-white
-                    text-[10px]
-                    text-[#3b4454]
-                    hover:bg-[#eef0f4]
-                  "
-                >
-                  إلغاء
-                </button>
+                  آخر التحديثات المتعلقة بطلابك
+                </p>
               </div>
-            </aside>
+
+              <button
+                type="button"
+                onClick={markAllAsRead}
+                disabled={unreadCount === 0}
+                className="
+                  inline-flex
+                  h-[44px]
+                  items-center
+                  justify-center
+                  gap-2
+
+                  rounded-[8px]
+
+                  border
+                  border-[#E0E7F2]
+
+                  bg-white
+
+                  px-4
+
+                  text-[12px]
+                  font-semibold
+
+                  text-[#111C2D]
+
+                  transition
+
+                  hover:border-[#09379A]
+                  hover:text-[#09379A]
+
+                  disabled:cursor-default
+                  disabled:opacity-50
+                "
+              >
+                <CheckCheck size={17} />
+
+                تحديد الكل كمقروء
+              </button>
+            </section>
+
+            {/* =============================================
+                FILTERS
+            ============================================== */}
+
+            <section
+              className="
+                mb-6
+
+                flex
+                flex-wrap
+                items-center
+                gap-2
+              "
+            >
+              {FILTERS.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() =>
+                    setActiveFilter(filter.id)
+                  }
+                  className={`
+                    h-[36px]
+
+                    rounded-full
+
+                    border
+
+                    px-4
+
+                    text-[11px]
+
+                    transition
+
+                    ${
+                      activeFilter === filter.id
+                        ? `
+                            border-[#09379A]
+                            bg-[#09379A]
+                            font-semibold
+                            text-white
+                          `
+                        : `
+                            border-[#E0E7F2]
+                            bg-white
+                            text-[#475569]
+                            hover:border-[#B9C9E8]
+                          `
+                    }
+                  `}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </section>
+
+            {/* =============================================
+                NOTIFICATIONS
+            ============================================== */}
+
+            <section
+              className="
+                w-full
+                min-w-0
+
+                overflow-hidden
+
+                rounded-[12px]
+
+                border
+                border-[#E0E7F2]
+
+                bg-white
+              "
+            >
+              {filteredNotifications.length > 0 ? (
+                filteredNotifications.map(
+                  (notification, index) => {
+                    const Icon = notification.icon;
+
+                    return (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() =>
+                          handleNotification(
+                            notification
+                          )
+                        }
+                        className={`
+                          relative
+
+                          flex
+                          w-full
+                          min-w-0
+
+                          items-start
+                          gap-4
+
+                          px-4
+                          py-5
+
+                          text-right
+
+                          transition-colors
+
+                          sm:px-6
+
+                          ${
+                            index !==
+                            filteredNotifications.length -
+                              1
+                              ? `
+                                  border-b
+                                  border-[#E6EBF5]
+                                `
+                              : ""
+                          }
+
+                          ${
+                            notification.read
+                              ? `
+                                  bg-white
+                                  hover:bg-[#FAFBFE]
+                                `
+                              : `
+                                  bg-[#F5F8FE]
+                                  hover:bg-[#EEF4FC]
+                                `
+                          }
+                        `}
+                      >
+                        {/* ICON */}
+
+                        <div
+                          className={`
+                            flex
+                            h-[46px]
+                            w-[46px]
+                            shrink-0
+
+                            items-center
+                            justify-center
+
+                            rounded-[9px]
+
+                            ${notification.iconClass}
+                          `}
+                        >
+                          <Icon
+                            size={20}
+                            strokeWidth={1.8}
+                          />
+                        </div>
+
+                        {/* CONTENT */}
+
+                        <div
+                          className="
+                            min-w-0
+                            flex-1
+                          "
+                        >
+                          <h2
+                            className="
+                              m-0
+
+                              text-[12px]
+                              font-bold
+                              leading-6
+
+                              text-[#111C2D]
+
+                              sm:text-[13px]
+                            "
+                          >
+                            {notification.title}
+                          </h2>
+
+                          <p
+                            className="
+                              m-0
+                              mt-[2px]
+
+                              text-[12px]
+                              leading-6
+
+                              text-[#64748B]
+
+                              sm:text-[13px]
+                            "
+                          >
+                            {notification.description}
+                          </p>
+
+                          <div
+                            className="
+                              mt-1
+
+                              flex
+                              flex-wrap
+                              items-center
+                              gap-2
+                            "
+                          >
+                            <span
+                              className="
+                                rounded-full
+
+                                bg-[#F1F5F9]
+
+                                px-2
+                                py-[2px]
+
+                                text-[9px]
+                                font-medium
+
+                                text-[#475569]
+                              "
+                            >
+                              {notification.badge}
+                            </span>
+
+                            <span
+                              className="
+                                text-[10px]
+                                text-[#64748B]
+                              "
+                            >
+                              {notification.time}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* UNREAD DOT */}
+
+                        {!notification.read && (
+                          <span
+                            className="
+                              absolute
+                              left-[23px]
+                              top-1/2
+
+                              h-[7px]
+                              w-[7px]
+
+                              -translate-y-1/2
+
+                              rounded-full
+
+                              bg-[#FF6B35]
+                            "
+                          />
+                        )}
+                      </button>
+                    );
+                  }
+                )
+              ) : (
+                <div
+                  className="
+                    flex
+                    min-h-[300px]
+                    flex-col
+                    items-center
+                    justify-center
+
+                    px-5
+                    py-12
+
+                    text-center
+                  "
+                >
+                  <div
+                    className="
+                      flex
+                      h-[56px]
+                      w-[56px]
+
+                      items-center
+                      justify-center
+
+                      rounded-full
+
+                      bg-[#F1F5F9]
+
+                      text-[#64748B]
+                    "
+                  >
+                    <Bell size={24} />
+                  </div>
+
+                  <h3
+                    className="
+                      m-0
+                      mt-4
+
+                      text-[14px]
+                      font-bold
+
+                      text-[#334155]
+                    "
+                  >
+                    لا توجد إشعارات
+                  </h3>
+
+                  <p
+                    className="
+                      m-0
+                      mt-1
+
+                      text-[11px]
+                      text-[#64748B]
+                    "
+                  >
+                    لا توجد إشعارات مطابقة لهذا التصنيف.
+                  </p>
+                </div>
+              )}
+            </section>
+
+            {/* =============================================
+                FOOTER
+            ============================================== */}
+
+            <AcademicFooter audience="admin" />
           </div>
         </main>
       </div>

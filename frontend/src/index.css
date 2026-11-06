@@ -1,4 +1,28 @@
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+
+:root {
+  --brand-blue-900: #09379A;
+
+  --accent-orange-500: #FF6B35;
+  --accent-orange-300: #FF9A60;
+  --accent-orange-100: #FFE5D9;
+
+  --neutral-800: #1E293B;
+  --neutral-600: #475569;
+  --neutral-50: #F8FAFC;
+
+  --brand-blue-100: #E6EBF5;
+  --brand-blue-50: #F5F7FB;
+
+  --white: #FFFFFF;
+
+  --status-success: #16A34A;
+  --status-danger: #DC2626;
+  --status-review: #2563EB;
+  --status-action: #D97706;
+  --status-draft: #6B7280;
+}
 
 * {
   box-sizing: border-box;
@@ -11,8 +35,60 @@ body,
   padding: 0;
   width: 100%;
   min-height: 100%;
+
+  direction: rtl;
+}
+
+html {
+  direction: rtl;
 }
 
 body {
-  font-family: Arial, sans-serif;
+  direction: rtl;
+  text-align: right;
+
+  font-family: "Cairo", Arial, sans-serif;
+  color: var(--neutral-800);
+  background: var(--white);
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Tadreeb: use a left-side vertical scrollbar across Arabic portal content.
+   The document direction is also set on <html dir="rtl"> in index.html,
+   so the browser's root scrollport follows the same direction.
+   Do not change horizontal table scroll or explicit LTR values (dates, codes).
+*/
+html,
+body,
+#root {
+  direction: rtl;
+}
+
+/* Independently scrollable page content (admin layouts, drawers and dialogs).
+   Exclude widgets explicitly marked dir="ltr". */
+main:not([dir="ltr"]),
+.overflow-y-auto:not([dir="ltr"]):not(.overflow-x-auto),
+.overflow-y-scroll:not([dir="ltr"]):not(.overflow-x-auto) {
+  direction: rtl;
+}
+
+/* Training provider: full-width RTL scrollport; keep LTR inputs/tables intact.
+   The page outer container is viewport-height, so the document itself does not scroll. */
+.provider-page-scroll {
+  direction: rtl;
+  scrollbar-gutter: stable;
+  overscroll-behavior-y: contain;
+}
+.provider-page-scroll > :first-child {
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }

@@ -1,183 +1,22 @@
-import Header from "../../components/student/Header";
-import Sidebar from "../../components/student/Sidebar";
-import { useNavigate } from "react-router-dom";
-
-export default function DailyTrainingLogDetails() {
-  const navigate = useNavigate();
-
-  const tasks = [
-    "متابعة تركيب الشبكات",
-    "تجربة استخدام جهاز الفحص",
-    "الاطلاع على نظام الدعم الفني",
-  ];
-
-  return (
-    <div dir="rtl" className="min-h-screen bg-white">
-      {/* ================= HEADER ================= */}
-      <Header />
-
-      {/* ================= PAGE BODY ================= */}
-      <div className="flex">
-        {/* ================= SIDEBAR ================= */}
-        <Sidebar />
-
-        {/* ================= MAIN ================= */}
-        <main className="flex-1 px-[28px] pt-[15px] pb-8">
-          {/* ================= BREADCRUMB ================= */}
-          <div className="text-[8px] text-[#9aa3ae] mb-[11px]">
-            الرئيسية
-            <span className="mx-[5px]">‹</span>
-            السجل التدريبي اليومي
-            <span className="mx-[5px]">‹</span>
-            تفاصيل السجل
-          </div>
-
-          {/* ================= TITLE ================= */}
-          <h1 className="text-[20px] font-bold text-[#293444] mb-[14px]">
-            تفاصيل السجل التدريبي اليومي
-          </h1>
-
-          {/* ================= BASIC INFO ================= */}
-          <section
-            className="
-              border
-              border-[#e0e3e7]
-              rounded-[8px]
-              bg-white
-              px-[16px]
-              py-[14px]
-              mb-[12px]
-            "
-          >
-            <div className="grid grid-cols-3 gap-[10px]">
-              {/* Date */}
-              <div className="border border-[#e0e3e7] rounded-[6px] px-[12px] py-[10px]">
-                <p className="text-[8px] text-[#8b95a2] mb-[5px]">
-                  التاريخ
-                </p>
-
-                <p className="text-[10px] font-bold text-[#293444]">
-                  2025/10/05
-                </p>
-              </div>
-
-              {/* Day */}
-              <div className="border border-[#e0e3e7] rounded-[6px] px-[12px] py-[10px]">
-                <p className="text-[8px] text-[#8b95a2] mb-[5px]">
-                  اليوم
-                </p>
-
-                <p className="text-[10px] font-bold text-[#293444]">
-                  الأحد
-                </p>
-              </div>
-
-              {/* Duration */}
-              <div className="border border-[#e0e3e7] rounded-[6px] px-[12px] py-[10px]">
-                <p className="text-[8px] text-[#8b95a2] mb-[5px]">
-                  المدة
-                </p>
-
-                <p className="text-[10px] font-bold text-[#293444]">
-                  6 ساعات
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* ================= DAY DETAILS ================= */}
-          <section
-            className="
-              border
-              border-[#e0e3e7]
-              rounded-[8px]
-              bg-white
-              px-[16px]
-              py-[15px]
-              mb-[12px]
-            "
-          >
-            <h2 className="text-[12px] font-bold text-[#293444] mb-[9px]">
-              تفاصيل اليوم
-            </h2>
-
-            <p className="text-[9px] leading-[20px] text-[#5f6a78]">
-              تم العمل على متابعة تركيب الشبكات وتعلم آلية فحص الأجهزة الجديدة.
-            </p>
-          </section>
-
-          {/* ================= COMPLETED TASKS ================= */}
-          <section
-            className="
-              border
-              border-[#e0e3e7]
-              rounded-[8px]
-              bg-white
-              px-[16px]
-              py-[15px]
-              mb-[14px]
-            "
-          >
-            <h2 className="text-[12px] font-bold text-[#293444] mb-[10px]">
-              المهام المنجزة
-            </h2>
-
-            <div className="space-y-[8px]">
-              {tasks.map((task) => (
-                <div
-                  key={task}
-                  className="flex items-center gap-[8px] text-[9px] text-[#5f6a78]"
-                >
-                  <span className="w-[5px] h-[5px] rounded-full bg-[#7d8998] shrink-0" />
-                  <span>{task}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ================= ACTIONS ================= */}
-          <div className="flex items-center gap-[10px]">
-            {/* Edit */}
-            <button
-              type="button"
-              className="
-                h-[33px]
-                px-[17px]
-                rounded-[5px]
-                bg-[#505b70]
-                text-white
-                text-[9px]
-                font-bold
-                hover:bg-[#414b5f]
-                transition
-              "
-            >
-              تعديل السجل
-            </button>
-
-            {/* Back */}
-            <button
-              type="button"
-              onClick={() => navigate("/daily-training-log")}
-              className="
-                h-[33px]
-                px-[17px]
-                rounded-[5px]
-                border
-                border-[#d7dce3]
-                bg-white
-                text-[#596575]
-                text-[9px]
-                font-bold
-                hover:bg-[#f7f8fa]
-                transition
-              "
-            >
-              رجوع
-            </button>
-          </div>
-        </main>
-      </div>
-    </div>
-  );
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowRight, CalendarDays, CheckCircle2, ClipboardList, Pencil, Info } from 'lucide-react';
+import Header from '../../components/student/Header';
+import Sidebar from '../../components/student/Sidebar';
+import AcademicFooter from '../../components/shared/AcademicFooter';
+import { getActiveStudentId } from '../../services/studentTrainingEligibility';
+import { getDailyLog, getCurrentTraining, LOG_STATES, subscribeTrainingLogs } from '../../services/dailyTrainingLogs';
+export default function DailyTrainingLogDetails(){
+ const navigate=useNavigate(); const [params]=useSearchParams(); const id=params.get('id');
+ const [log,setLog]=useState(()=>getDailyLog(getActiveStudentId(),id));
+ const training=getCurrentTraining();
+ useEffect(()=>subscribeTrainingLogs(()=>setLog(getDailyLog(getActiveStudentId(),id))),[id]);
+ return <div dir="rtl" className="flex min-h-dvh bg-[#F8FAFC] font-['Cairo'] text-[#17233B]"><Sidebar/><div className="flex min-h-dvh min-w-0 flex-1 flex-col"><Header/><main className="flex-1 p-4 sm:p-6 lg:p-8"><div className="mx-auto max-w-[1050px]"><button onClick={()=>navigate('/student/daily-training-log')} className="mb-5 inline-flex items-center gap-2 text-[13px] font-bold text-[#09379A]"><ArrowRight size={17}/>العودة إلى السجلات</button>
+ {!log?<section className="rounded-xl border bg-white p-10 text-center"><h1 className="text-lg font-bold">السجل غير موجود</h1><p className="mt-2 text-sm text-[#64748B]">قد يكون السجل غير مرتبط بحسابك الحالي.</p></section>:<><div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-[26px] font-bold text-[#102C61]">تفاصيل السجل اليومي</h1><p className="mt-2 text-[13px] text-[#64748B]">{training?.opportunity||'التدريب الميداني'} • {log.date}</p></div><span className="rounded-full bg-[#EAF1FF] px-4 py-2 text-[12px] font-bold text-[#09379A]">{LOG_STATES[log.status]||log.status}</span></div>
+ <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]"><div className="space-y-5"><section className="rounded-xl border border-[#E0E7F2] bg-white p-5"><div className="mb-4 flex items-center gap-2 text-[#102C61]"><ClipboardList size={19}/><h2 className="font-bold">المهام المنجزة</h2></div><div className="space-y-3">{log.tasks.map((task,i)=><div key={i} className="flex items-start gap-3 rounded-lg bg-[#F8FAFC] p-3 text-[13px]"><CheckCircle2 size={18} className="mt-0.5 shrink-0 text-[#09379A]"/><span>{task}</span></div>)}</div></section>
+ {log.learning&&<section className="rounded-xl border border-[#E0E7F2] bg-white p-5"><h2 className="mb-3 font-bold text-[#102C61]">ما تعلمته</h2><p className="whitespace-pre-wrap text-[13px] leading-8">{log.learning}</p></section>}
+ {log.challenges&&<section className="rounded-xl border border-[#E0E7F2] bg-white p-5"><h2 className="mb-3 font-bold text-[#102C61]">التحديات والملاحظات</h2><p className="whitespace-pre-wrap text-[13px] leading-8">{log.challenges}</p></section>}
+ {log.reviewNote&&<section className="rounded-xl border border-amber-200 bg-amber-50 p-5"><h2 className="font-bold text-amber-900">ملاحظات المشرف الميداني</h2><p className="mt-2 whitespace-pre-wrap text-[13px] leading-7 text-amber-900">{log.reviewNote}</p></section>}</div>
+ <div className="space-y-5"><section className="rounded-xl border border-[#E0E7F2] bg-white p-5"><h2 className="mb-4 font-bold text-[#102C61]">معلومات السجل</h2><div className="space-y-4 text-[13px]"><div className="flex justify-between"><span className="text-[#64748B]">التاريخ</span><span className="font-semibold">{log.date}</span></div><div className="flex justify-between"><span className="text-[#64748B]">عدد المهام</span><span className="font-semibold">{log.tasks.length}</span></div><div className="flex justify-between"><span className="text-[#64748B]">المشرف</span><span className="font-semibold">{training?.supervisor||'—'}</span></div></div></section><section className="flex items-start gap-2 rounded-xl border border-[#D9E5FF] bg-[#F0F5FF] p-4 text-[12px] leading-7 text-[#375780]"><Info size={18} className="mt-1 shrink-0"/><p>الساعات المعتمدة تُحسب من الحضور، ولا تُضاف ساعات السجل اليومي مرة ثانية.</p></section>{['draft','revision'].includes(log.status)&&<button onClick={()=>navigate('/student/daily-training-log')} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#09379A] px-5 py-3 text-[13px] font-bold text-white"><Pencil size={17}/>العودة لتعديل السجل</button>}</div></div></>}
+ <AcademicFooter audience="student"/></div></main></div></div>;
 }
