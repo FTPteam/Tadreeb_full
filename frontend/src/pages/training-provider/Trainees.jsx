@@ -4,7 +4,8 @@ import { Search, SlidersHorizontal, ArrowDownUp, Download, Printer, Eye, Users, 
 import Sidebar from '../../components/training-provider/Sidebar';
 import Header from '../../components/training-provider/Header';
 import ProviderFooter from '../../components/training-provider/ProviderFooter';
-import { getTrainees, subscribeTrainees, exportTraineesCsv, completionChecklist, completeTrainee } from './traineesStore';
+import { exportTraineesCsv, completionChecklist, completeTrainee } from './traineesStore';
+import { getTrainees, subscribeTrainees } from '../../api/provider';
 const labels={all:'الكل',active:'قيد التدريب',not_started:'لم يبدأ',completed:'منتهٍ'};
 const supervisors=['خالد عودة','رنا الحلو','أحمد شحادة'];
 const btn='inline-flex h-11 items-center justify-center gap-2 rounded-[8px] border border-[#E0E7F2] bg-white px-4 text-[13px] hover:bg-[#F8FAFC]';

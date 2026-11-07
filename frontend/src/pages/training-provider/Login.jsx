@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 import AuthLayout from "./AuthLayout";
-import { findProviderOrganizationByEmail, setActiveProviderOrganization } from "../../services/providerOrganization";
+import { HOME_BY_ROLE, login, logout } from "../../api/auth";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -48,7 +48,9 @@ export default function Login() {
     // setLoginError("");
   };
 
-  const handleSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const newErrors = {};
@@ -69,27 +71,20 @@ export default function Login() {
 
     if (Object.keys(newErrors).length > 0) return;
 
-    /*
-     * TODO (Backend): تفعيل تسجيل الدخول الحقيقي.
-     *
-     * عند ربط الـ API:
-     * 1. إرسال البريد وكلمة المرور لخدمة المصادقة.
-     * 2. التحقق من بيانات الدخول ودور المستخدم.
-     * 3. إنشاء جلسة مصادقة آمنة.
-     * 4. التعامل مع أخطاء تسجيل الدخول.
-     * 5. تفعيل خيار "تذكرني".
-     * 6. الانتقال للداشبورد بعد نجاح المصادقة فقط.
-     */
-
-    // TEMP demo flow: credentials are not authenticated until the backend is connected.
-    const organization = findProviderOrganizationByEmail(formData.email);
-    if (!organization) {
-      setErrors(prev => ({ ...prev, email: "هذا البريد غير مسجل كجهة تدريب. أنشئ حساب جهة أولًا أو استخدم البريد التجريبي المسجل." }));
-      return;
+    setSubmitting(true);
+    try {
+      const user = await login(formData.email, formData.password);
+      if (user.role !== "provider") {
+        logout();
+        setErrors({ password: "هذا الحساب ليس حساب جهة تدريب. استخدم بوابة الدخول الخاصة بدورك." });
+        return;
+      }
+      navigate(HOME_BY_ROLE.provider, { replace: true });
+    } catch (error) {
+      setErrors({ password: error.message });
+    } finally {
+      setSubmitting(false);
     }
-    // Temporary demo session: the password is NOT verified until the backend is connected.
-    setActiveProviderOrganization(organization.id);
-    navigate("/training-provider/dashboard", { replace: true });
   };
 
   return (
@@ -210,10 +205,11 @@ export default function Login() {
         {/* LOGIN */}
         <button
           type="submit"
-          className="mt-5 flex h-[48px] w-full items-center justify-center gap-2 rounded-[9px] bg-[#09379A] text-[14px] font-bold text-white transition hover:bg-[#072F86]"
+          disabled={submitting}
+          className="mt-5 flex h-[48px] w-full items-center justify-center gap-2 rounded-[9px] bg-[#09379A] text-[14px] font-bold text-white transition hover:bg-[#072F86] disabled:opacity-60"
         >
           <ArrowLeft size={17} />
-          تسجيل الدخول
+          {submitting ? "جارٍ تسجيل الدخول..." : "تسجيل الدخول"}
         </button>
 
         {/* SSO */}

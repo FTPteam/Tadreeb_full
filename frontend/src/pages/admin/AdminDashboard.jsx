@@ -6,7 +6,6 @@ import {
   Building2,
   Activity,
   FileText,
-  Star,
   Clock3,
   AlertTriangle,
   CalendarClock,
@@ -17,61 +16,10 @@ import AdminPageLayout, {
   DashboardPanel,
   DashboardStat,
 } from "../../components/admin/AdminPageLayout";
+import { useApi } from "../../api/useApi";
+import { fetchStats } from "../../api/admin";
+import { getCurrentUser } from "../../api/auth";
 
-const ACTIVITIES = [
-  {
-    title: "تم قبول طلب الطالب محمود رضوان",
-    time: "منذ 20 دقيقة",
-    icon: FileCheck,
-    color: "green",
-    path: "/admin/training-requests",
-  },
-  {
-    title: "تقرير أسبوعي جديد من أمل أحمد",
-    time: "منذ ساعة",
-    icon: FileText,
-    color: "blue",
-    path: "/admin/reports",
-  },
-  {
-    title: "اعتماد جهة تدريب جديدة: شركة جوال",
-    time: "اليوم",
-    icon: Building2,
-    color: "cyan",
-    path: "/admin/training-organizations",
-  },
-  {
-    title: "اكتمل تقييم الطالب أنس البيطار",
-    time: "أمس",
-    icon: Star,
-    color: "orange",
-    path: "/admin/evaluations",
-  },
-];
-
-const ALERTS = [
-  {
-    title: "3 طلاب متأخرون في تسليم التقرير الأسبوعي",
-    time: "اليوم",
-    icon: AlertTriangle,
-    color: "orange",
-    path: "/admin/reports",
-  },
-  {
-    title: "تنتهي فترة تدريب 12 طالبًا خلال أسبوع",
-    time: "غدًا",
-    icon: CalendarClock,
-    color: "blue",
-    path: "/admin/training-monitoring",
-  },
-];
-
-const TRAINING_STATUSES = [
-  { label: "قيد التدريب", value: 248, color: "bg-[#09379A]" },
-  { label: "لم يبدأ", value: 38, color: "bg-[#09379A]" },
-  { label: "منتهٍ", value: 18, color: "bg-[#15803D]" },
-  { label: "متعثر", value: 8, color: "bg-[#09379A]" },
-];
 
 const ICON_COLORS = {
   blue: "bg-[#E6EBF5] text-[#09379A]",
@@ -107,13 +55,30 @@ function ViewAllButton({ onClick }) {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  // FR-36 / FR-38: live numbers from /api/stats/ (it answers by the user's role).
+  const stats = useApi(fetchStats, []).data || {};
+  const byStatus = stats.applications?.by_status || {};
+  const user = getCurrentUser();
+  const trainingStatuses = [
+    { label: "قيد التدريب", value: byStatus.in_training || 0, color: "bg-[#09379A]" },
+    { label: "موزّع بانتظار الجهة", value: byStatus.assigned || 0, color: "bg-[#09379A]" },
+    { label: "أنهى الساعات", value: byStatus.completed || 0, color: "bg-[#15803D]" },
+    { label: "حاصل على الشهادة", value: byStatus.certified || 0, color: "bg-[#15803D]" },
+  ];
+  const largest = Math.max(1, ...trainingStatuses.map(item => item.value));
+  const alerts = [
+    stats.training?.pending_days ? { title: `${stats.training.pending_days} أيام تدريب بانتظار تأكيد الجهات`, time: "الآن", icon: CalendarClock, color: "blue", path: "/admin/daily-logs" } : null,
+    byStatus.submitted ? { title: `${byStatus.submitted} طلبات جديدة بانتظار المراجعة`, time: "الآن", icon: AlertTriangle, color: "orange", path: "/admin/training-requests" } : null,
+  ].filter(Boolean);
+  const pendingRequests = (byStatus.submitted || 0) + (byStatus.under_review || 0);
+  const reportsToGrade = Math.max(0, (stats.reports?.submitted || 0) - (stats.reports?.graded || 0));
 
   return (
     <AdminPageLayout className="space-y-5">
       {/* WELCOME */}
       <section className="rounded-[12px] bg-[#09379A] px-6 py-7 text-white">
         <h1 className="m-0 text-[23px] font-bold">
-          مرحبًا د. سامر
+          مرحبًا {user?.full_name || user?.username || ""}
         </h1>
         <p className="m-0 mt-2 text-[12px] text-[#D8E5FB]">
           نظرة عامة على طلباتك وجهات التدريب
@@ -123,8 +88,8 @@ export default function AdminDashboard() {
       {/* MAIN STATISTICS */}
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <DashboardStat
-          label="إجمالي الطلاب المتدربين"
-          value="312"
+          label="إجمالي الطلاب"
+          value={String(stats.students ?? 0)}
           unit="طالب"
           icon={Users}
           color="blue"
@@ -133,7 +98,7 @@ export default function AdminDashboard() {
 
         <DashboardStat
           label="الطلاب النشطون"
-          value="248"
+          value={String(byStatus.in_training ?? 0)}
           unit="طالب"
           icon={Activity}
           color="green"
@@ -142,7 +107,7 @@ export default function AdminDashboard() {
 
         <DashboardStat
           label="لم يبدأوا التدريب"
-          value="38"
+          value={String((byStatus.accepted || 0) + (byStatus.assigned || 0))}
           unit="طالب"
           icon={Clock3}
           color="orange"
@@ -151,7 +116,7 @@ export default function AdminDashboard() {
 
         <DashboardStat
           label="جهات التدريب"
-          value="46"
+          value={String(stats.providers?.approved ?? 0)}
           unit="جهة"
           icon={Building2}
           color="cyan"
@@ -163,7 +128,7 @@ export default function AdminDashboard() {
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <DashboardStat
           label="طلبات معلقة"
-          value="18"
+          value={String(pendingRequests)}
           unit="طلب"
           icon={FileCheck}
           color="orange"
@@ -173,7 +138,7 @@ export default function AdminDashboard() {
         
         <DashboardStat
           label="تقارير تحتاج مراجعة"
-          value="24"
+          value={String(reportsToGrade)}
           unit="تقرير"
           icon={FileText}
           color="blue"
@@ -193,7 +158,7 @@ export default function AdminDashboard() {
           }
         >
           <div>
-            {TRAINING_STATUSES.map((item) => (
+            {trainingStatuses.map((item) => (
               <button
                 key={item.label}
                 type="button"
@@ -211,7 +176,7 @@ export default function AdminDashboard() {
                   <div
                     className={`h-full rounded-full ${item.color}`}
                     style={{
-                      width: `${(item.value / 248) * 100}%`,
+                      width: `${(item.value / largest) * 100}%`,
                     }}
                   />
                 </div>
@@ -228,7 +193,7 @@ export default function AdminDashboard() {
             />
           }
         >
-          {ALERTS.map((alert) => (
+          {alerts.map((alert) => (
             <button
               key={alert.title}
               type="button"
@@ -261,7 +226,7 @@ export default function AdminDashboard() {
           />
         }
       >
-        {ACTIVITIES.map((activity) => (
+        {[].map((activity) => (
           <button
             key={activity.title}
             type="button"

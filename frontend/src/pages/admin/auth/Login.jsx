@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
 import AdminAuthLayout from "./AdminAuthLayout";
+import { HOME_BY_ROLE, login, logout } from "../../../api/auth";
+
+const STAFF_ROLES = ["coordinator", "admin", "supervisor"];
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -9,16 +12,29 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
     const nextErrors = {};
     if (!form.identifier.trim()) nextErrors.identifier = "هذا الحقل مطلوب";
     if (!form.password) nextErrors.password = "هذا الحقل مطلوب";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    // للعرض التجريبي فقط: لا يتم التحقق من بيانات الدخول دون خدمة المصادقة.
-    navigate("/admin/dashboard");
+    setSubmitting(true);
+    try {
+      const user = await login(form.identifier, form.password);
+      if (!STAFF_ROLES.includes(user.role)) {
+        logout();
+        setErrors({ form: "هذا الحساب ليس حساب إدارة. استخدم بوابة الدخول الخاصة بدورك." });
+        return;
+      }
+      navigate(HOME_BY_ROLE[user.role]);
+    } catch (error) {
+      setErrors({ form: error.message });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -43,7 +59,8 @@ export default function AdminLogin() {
           <label className="flex cursor-pointer items-center gap-2"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="accent-[#09379A]" />تذكرني</label>
           <Link to="/admin/forgot-password" className="font-bold text-[#09379A] hover:underline">نسيت كلمة المرور؟</Link>
         </div>
-        <button type="submit" className="flex h-12 w-full items-center justify-center gap-2 rounded-[8px] bg-[#09379A] text-[14px] font-bold text-white hover:bg-[#092E80]">تسجيل الدخول <ArrowLeft size={17} /></button>
+        {errors.form && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-700">{errors.form}</p>}
+        <button type="submit" disabled={submitting} className="flex h-12 w-full items-center justify-center gap-2 rounded-[8px] bg-[#09379A] text-[14px] font-bold text-white hover:bg-[#092E80] disabled:opacity-60">{submitting ? "جارٍ تسجيل الدخول..." : "تسجيل الدخول"} <ArrowLeft size={17} /></button>
       </form>
       <p className="mt-6 text-center text-[12px] text-[#64748B]">بوابة خاصة بالإدارة والمشرفين الأكاديميين</p>
     </AdminAuthLayout>

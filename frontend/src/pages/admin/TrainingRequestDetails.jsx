@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 import Sidebar from "../../components/admin/Sidebar";
-import { getRequest, decideRequest } from "./trainingRequestsStore";
+import { decideRequest, fetchRequest } from "../../api/admin";
 
 // =====================================================
 // SHARED REQUEST STORE
@@ -39,9 +39,8 @@ export default function TrainingRequestDetails() {
   const location = useLocation();
   const { id } = useParams();
 
-  const [request, setRequest] = useState(() =>
-    getRequest(id)
-  );
+  const [request, setRequest] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // General note written in the page
   const [note, setNote] = useState(
@@ -62,13 +61,19 @@ export default function TrainingRequestDetails() {
 
   // Reload correct request if URL changes
   useEffect(() => {
-    const nextRequest = getRequest(id);
-
-    setRequest(nextRequest);
-    setNote(nextRequest?.note || "");
-    setRejectionReason("");
-    setDecision(null);
-    setError("");
+    let active = true;
+    fetchRequest(id)
+      .catch(() => null)
+      .then(nextRequest => {
+        if (!active) return;
+        setRequest(nextRequest);
+        setNote(nextRequest?.note || "");
+        setRejectionReason("");
+        setDecision(null);
+        setError("");
+        setLoading(false);
+      });
+    return () => { active = false; };
   }, [id]);
 
   // Close modal with Escape
@@ -129,7 +134,7 @@ export default function TrainingRequestDetails() {
   // CONFIRM APPROVAL / REJECTION
   // =====================================================
 
-  const confirmDecision = () => {
+  const confirmDecision = async () => {
     if (
       !request ||
       !decision ||
@@ -174,9 +179,9 @@ export default function TrainingRequestDetails() {
 
     setSaving(true);
 
-    let saved;
+    let successMessage;
     try {
-      saved = decideRequest(updatedRequest, updatedRequest.status);
+      successMessage = await decideRequest(updatedRequest, updatedRequest.status);
     } catch (error) {
       setSaving(false);
       setError(error?.message || "تعذر حفظ القرار. يرجى المحاولة مرة أخرى.");
@@ -186,10 +191,6 @@ export default function TrainingRequestDetails() {
     setRequest(updatedRequest);
     setDecision(null);
     setSaving(false);
-
-    const successMessage = isApproval
-      ? `تم تسجيل قبول الطلب ${request.id} من المشرف بنجاح.`
-      : `تم تسجيل رفض الطلب ${request.id} بنجاح.`;
 
     navigate("/admin/training-requests", {
       replace: true,
@@ -202,6 +203,8 @@ export default function TrainingRequestDetails() {
   // =====================================================
   // REQUEST NOT FOUND
   // =====================================================
+
+  if (!request && loading) return null;
 
   if (!request) {
     return (

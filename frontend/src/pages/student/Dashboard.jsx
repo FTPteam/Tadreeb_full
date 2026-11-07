@@ -1,9 +1,13 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
 import { useNavigate } from "react-router-dom";
-import { getMyApplications } from "./studentApplicationView";
-import { getCurrentTraining } from "../../services/dailyTrainingLogs";
-import { getStudentVisibleOpportunities } from "../training-provider/opportunitiesStore";
 import { selectOpportunity } from "./studentApplicationDraft";
+import { useApi } from "../../api/useApi";
+import {
+  fetchCurrentTraining,
+  fetchMyApplications,
+  fetchNotifications,
+  fetchOpportunities,
+} from "../../api/student";
 
 import {
   Clock3,
@@ -26,10 +30,12 @@ export default function Dashboard() {
 
   const currentYear = new Date().getFullYear();
 
-  // All values below come from the current demo stores, never fixed promotional counts.
-  const training = getCurrentTraining();
-  const myApplications = getMyApplications();
-  const availableOpportunities = getStudentVisibleOpportunities().filter(o => o.status === 'published');
+  // All values below come from the backend.
+  const training = useApi(fetchCurrentTraining, []).data;
+  const myApplications = useApi(fetchMyApplications, [], []).data;
+  // A student who isn't eligible gets 403 for opportunities: show none.
+  const availableOpportunities = (useApi(fetchOpportunities, [], []).data || []).filter(o => o.status === 'published');
+  const recentNotifications = useApi(fetchNotifications, [], []).data || [];
   const statistics = [
     { title: 'الساعات المنجزة', value: Number(training?.completedHours) || 0, icon: Clock3 },
     { title: 'تدريبي الحالي', value: training && ['active','not_started'].includes(training.status) ? 1 : 0, icon: BriefcaseBusiness },
@@ -44,8 +50,10 @@ export default function Dashboard() {
     chipBg: ['rgba(0,180,216,0.15)','rgba(245,158,11,0.15)','rgba(16,185,129,0.15)'][index % 3],
     chipDot: ['#00B4D8','#F59E0B','#10B981'][index % 3],
   }));
-  // Notifications require a backend source; do not display invented dates or events.
-  const notifications = [];
+  const notifications = recentNotifications.slice(0, 3).map(n => ({
+    ...n,
+    date: new Date(n.time).toLocaleDateString("ar-EG", { day: "numeric", month: "long" }),
+  }));
 
   return (
     <div
@@ -420,7 +428,7 @@ export default function Dashboard() {
                       (notification, index) => (
                         <button
                           type="button"
-                          key={notification.title}
+                          key={notification.id}
                           onClick={() =>
                             navigate(
                               "/student/notifications"

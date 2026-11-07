@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import AuthGate from "./components/shared/AuthGate";
 
 // ========================================
 // STUDENT PAGES
@@ -115,6 +116,7 @@ import TrainingProviderAttendance from "./pages/training-provider/Attendance";
 function App() {
   return (
     <BrowserRouter>
+      <AuthGate>
       <Routes>
 
         {/* =================================
@@ -600,6 +602,7 @@ function App() {
         />
 
       </Routes>
+      </AuthGate>
     </BrowserRouter>
   );
 }

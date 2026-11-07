@@ -5,8 +5,8 @@ import {Inbox, Search, SlidersHorizontal,ArrowDownUp, Download, FileSpreadsheet,
 import Sidebar from '../../components/training-provider/Sidebar';
 import Header from '../../components/training-provider/Header';
 import ProviderFooter from '../../components/training-provider/ProviderFooter';
-import {getOpportunities,getOpportunity,subscribeOpportunities,setOpportunityStatus} from './opportunitiesStore';
-import {getProviderApplications,subscribeApplications,decideApplication,exportApplicationsCsv} from './providerApplicationsStore';
+import {getOpportunities,getOpportunity,subscribeOpportunities,setOpportunityStatus,getProviderApplications,subscribeApplications,decideApplication} from '../../api/provider';
+import {exportApplicationsCsv} from './providerApplicationsStore';
 
 const label={pending:'معلق',accepted:'مقبول',rejected:'مرفوض'};
 const colors={pending:'bg-[#FFE5DA] text-[#B93813]',accepted:'bg-[#DCFCE7] text-[#15803D]',rejected:'bg-[#FEE2E2] text-[#C81E1E]'};
@@ -27,7 +27,7 @@ export default function Requests(){
  const pageSize=8,totalPages=Math.max(1,Math.ceil(filtered.length/pageSize)),visible=filtered.slice((Math.min(page,totalPages)-1)*pageSize,page*pageSize);
  const open=(type,record=null)=>{setDialog(type);setSelected(record);setError('');setReason('');setStartDate('');setNote('');setSupervisor('خالد عودة');setMenu('')};
  const close=()=>{setDialog('');setSelected(null);setError('')};
- const decide=type=>{const result=decideApplication(selected.id,type==='accept'?'accepted':'rejected',type==='accept'?{supervisor,startDate,note}:{rejectionReason:reason});if(!result.ok){setError(result.message);return}setNotice(type==='accept'?'تم قبول الطالب وحفظ القرار':'تم رفض الطلب وحفظ السبب');close()};
+ const decide=async type=>{const result=await decideApplication(selected.id,type==='accept'?'accepted':'rejected',type==='accept'?{supervisor,startDate,note}:{rejectionReason:reason});if(!result.ok){setError(result.message);return}setNotice(type==='accept'?'تم تأكيد قبول الطالب وبدأ تدريبه':'تم إبلاغ منسق التدريب برفض الطالب وسببه');close()};
  const reset=()=>{setQ('');setTab('all');setFilterMajor('all');setFilterOpp('all')};
  const unavailable=name=>setNotice(`صفحة «${name}» لم تُنجز بعد.`);
  return <div dir="rtl" className="flex h-dvh overflow-hidden bg-[#F8FAFC] font-['Cairo'] text-[#17233B]"><Sidebar open={mobile} onClose={()=>setMobile(false)} onLogout={()=>open('logout')} onUnavailable={unavailable}/><div className="provider-page-scroll h-dvh min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden flex flex-col"><Header onMenu={()=>setMobile(true)} onLogout={()=>open('logout')} onUnavailable={unavailable}/><main className="mx-auto w-full max-w-[1500px] flex-1 p-4 sm:p-6 lg:px-8">

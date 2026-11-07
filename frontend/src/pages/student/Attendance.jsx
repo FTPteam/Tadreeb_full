@@ -1,6 +1,6 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -18,8 +18,26 @@ import {
 
 import Header from "../../components/student/Header";
 import Sidebar from "../../components/student/Sidebar";
-import { getActiveStudentId } from "../../services/studentTrainingEligibility";
-import { getSharedAttendance, subscribeSharedAttendance } from "../../services/sharedAttendance";
+import { useApi } from "../../api/useApi";
+import { fetchAttendance } from "../../api/student";
+
+// FR-22: the backend works the rate out (confirmed days ÷ working days, excused days left out).
+async function loadAttendance() {
+  const data = await fetchAttendance().catch(() => null);
+  const records = (data?.daily_breakdown || [])
+    .filter(day => day.is_working_day)
+    .map(day => ({
+      id: day.date,
+      date: day.date,
+      // An excused day shows as an absence with an accepted excuse.
+      status: day.status_code === "present" ? "present" : "absent",
+      excused: day.status_code === "excused",
+      note: day.notes || day.status,
+      hours: day.hours,
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  return { records, rate: data?.attendance_rate ?? 0, alert: Boolean(data?.alert) };
+}
 
 const initialAttendanceRows = [
   { id: 1, date: "2025/10/01", day: "الأربعاء", status: "present", note: "—" },
@@ -85,12 +103,8 @@ function getExcuseForDate(excuses, dateString) {
 
 export default function Attendance() {
   const navigate = useNavigate();
-  const [sharedAttendance, setSharedAttendance] = useState(() => getSharedAttendance(getActiveStudentId()));
-  useEffect(() => {
-    const refresh = () => setSharedAttendance(getSharedAttendance(getActiveStudentId()));
-    refresh();
-    return subscribeSharedAttendance(refresh);
-  }, []);
+  const sharedAttendance = useApi(loadAttendance, [], { records: [], rate: 0, alert: false }).data
+    || { records: [], rate: 0, alert: false };
 
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -118,9 +132,9 @@ export default function Attendance() {
         inTime: record.inTime || "—",
         outTime: record.outTime || "—",
         hours: Number(record.hours ?? record.durationHours ?? 0),
-        justified: excuse?.status === "approved",
-        excuseSubmitted: Boolean(excuse),
-        excuseStatus: excuse?.status || "",
+        justified: record.excused || excuse?.status === "approved",
+        excuseSubmitted: record.excused || Boolean(excuse),
+        excuseStatus: record.excused ? "approved" : excuse?.status || "",
         excuseReason: excuse?.reason || "",
       };
     });
@@ -173,11 +187,9 @@ export default function Attendance() {
       absenceDays,
       totalDays,
       justifiedAbsenceDays,
-      attendanceRate: totalDays
-        ? Math.round((presentDays / totalDays) * 100)
-        : 0,
+      attendanceRate: sharedAttendance.rate,
     };
-  }, [attendanceRows]);
+  }, [attendanceRows, sharedAttendance.rate]);
 
   // التنقل بين الأشهر
   const changeMonth = (amount) => {

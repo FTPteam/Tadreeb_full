@@ -1,27 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Users, BriefcaseBusiness, Inbox, FileText, Star, CalendarCheck, ChevronLeft, UserRound, Plus, ChartNoAxesColumn, LogOut, X, AlertCircle } from "lucide-react";
 import Sidebar from "../../components/training-provider/Sidebar";
 import Header from "../../components/training-provider/Header";
 import ProviderFooter from "../../components/training-provider/ProviderFooter";
-import { getActiveProviderOrganization } from "../../services/providerOrganization";
+import { getOpportunities, getProviderStats, subscribeProviderData } from "../../api/provider";
 
-const incoming = [
-  { name: "هبة سامي القدرة", major: "تدريب تطوير الويب", date: "2025/10/03" },
-  { name: "طارق ياسر الأغا", major: "تدريب شبكات الاتصالات", date: "2025/10/04" },
-  { name: "نادين عصام اللوح", major: "تدريب تطوير الويب", date: "2025/10/05" },
-];
-const evaluations = [
-  { name: "وليد أحمد صيام", field: "تدريب تطوير الويب" },
-  { name: "محمود إبراهيم رضوان", field: "تدريب تحليل البيانات" },
-  { name: "مصطفى هاني العرجا", field: "تدريب الدعم الفني" },
-];
-const activities = [
-  { title: "وصل طلب جديد من هبة القدرة", time: "منذ 15 دقيقة", Icon: Inbox, tone: "orange" },
-  { title: "سجل يومي جديد من أمل أحمد", time: "منذ ساعة", Icon: FileText, tone: "blue" },
-  { title: "تم تسجيل حضور المتدربين اليوم", time: "08:30 ص", Icon: CalendarCheck, tone: "green" },
-  { title: "اكتمل تقييم يوسف عوض", time: "أمس", Icon: Star, tone: "orange" },
-];
 const tones={blue:"bg-[#E7EDF8] text-[#09379A]",orange:"bg-[#FFE5DA] text-[#BC481C]",green:"bg-[#DCFCE7] text-[#15803D]",sky:"bg-[#DDF6FD] text-[#047BA2]"};
 function Stat({ Icon, label, value, unit, tone, onClick }) { return <button type="button" onClick={onClick} className="w-full rounded-[11px] border border-[#E0E7F2] bg-white px-5 py-4 text-right transition hover:border-[#B5C6E5] hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#09379A]"><div className="flex items-center justify-between gap-2"><span className="text-[12px] font-semibold text-[#374151]">{label}</span><span className={`flex h-9 w-9 items-center justify-center rounded-[8px] ${tones[tone]}`}><Icon size={18}/></span></div><div className="mt-3 flex items-end gap-2"><strong className="text-[29px] leading-none text-[#092B78]">{value}</strong><small className="pb-1 text-[11px] text-[#8290A5]">{unit}</small></div></button>; }
 function Box({title,action,children,className=""}) {return <section className={`rounded-[11px] border border-[#E0E7F2] bg-white p-5 ${className}`}><div className="mb-3 flex min-h-[30px] items-center justify-between border-b border-[#E8EDF5] pb-3"><h2 className="text-[15px] font-bold text-[#092B78]">{title}</h2>{action}</div>{children}</section>}
@@ -67,8 +51,15 @@ export default function Dashboard(){
   const [mobile,setMobile]=useState(false);
   const [modal,setModal]=useState(null);
   const [notice,setNotice]=useState("");
-  const organization = getActiveProviderOrganization();
-  const isSeedOrganization = String(organization?.id) === '1';
+  const [, setVersion] = useState(0);
+  useEffect(() => subscribeProviderData(() => setVersion(v => v + 1)), []);
+  // FR-36: the provider's numbers and to-do list from /api/stats/provider/.
+  const stats = getProviderStats();
+  const organization = { name: stats?.provider_name, status: 'approved' };
+  const incoming = (stats?.pending_acceptances || []).map(item => ({ name: item.student_name, major: item.opportunity_title, date: item.start_date }));
+  const evaluations = [];
+  const activities = [];
+  const isSeedOrganization = true;
   // يستقبل روابط الهيدر والسايدبار القديمة، ويحوّلها الآن إلى الصفحات المنجزة.
   const goToSection = (name) => {
     const routes = {
@@ -108,10 +99,10 @@ export default function Dashboard(){
         <div className="rounded-[10px] bg-[#09379A] px-7 py-7 text-white"><h1 className="text-[24px] font-bold">مرحباً بجهة التدريب</h1><p className="mt-1 text-[12px] text-white/85">{organization?.name || 'جهة التدريب'} • بوابة متابعة التدريب الميداني</p></div>
         {organization?.status !== 'approved' && <div className="mt-4 rounded-[10px] border border-[#F5D7A5] bg-[#FFF8E8] px-5 py-4 text-[12px] leading-7 text-[#8A5A12]"><strong>حالة الاعتماد: {organization?.status === 'rejected' ? 'مرفوضة' : 'بانتظار اعتماد الإدارة'}.</strong> يمكنك استكمال بيانات الجهة وتجهيز الفرص كمسودات، لكن نشر الفرص واستقبال طلبات الطلاب يتطلب اعتماد الإدارة أولًا. <button onClick={()=>navigate('/training-provider/profile')} className="mr-2 font-bold underline">عرض ملف الجهة</button></div>}
         <div className="mt-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
-          <Stat Icon={Users} label="المتدربون الحاليون" value={isSeedOrganization ? "14" : "0"} unit="متدرب" tone="blue" onClick={()=>navigate("/training-provider/trainees")}/>
-          <Stat Icon={BriefcaseBusiness} label="فرص منشورة" value={isSeedOrganization ? "3" : "0"} unit="فرص" tone="green" onClick={()=>navigate("/training-provider/opportunities")}/>
-          <Stat Icon={Inbox} label="طلبات معلقة" value={isSeedOrganization ? "6" : "0"} unit="طلب" tone="orange" onClick={()=>navigate("/training-provider/requests")}/>
-          <Stat Icon={FileText} label="سجلات بانتظار المراجعة" value={isSeedOrganization ? "7" : "0"} unit="سجل" tone="sky" onClick={()=>navigate("/training-provider/attendance", { state: { tab: "logs", status: "pending" } })}/>
+          <Stat Icon={Users} label="المتدربون الحاليون" value={String(stats?.active_trainees ?? 0)} unit="متدرب" tone="blue" onClick={()=>navigate("/training-provider/trainees")}/>
+          <Stat Icon={BriefcaseBusiness} label="فرص منشورة" value={String(getOpportunities().filter(o => o.status === "published").length)} unit="فرص" tone="green" onClick={()=>navigate("/training-provider/opportunities")}/>
+          <Stat Icon={Inbox} label="طلبات معلقة" value={String(stats?.pending_tasks?.students_to_accept ?? 0)} unit="طلب" tone="orange" onClick={()=>navigate("/training-provider/requests")}/>
+          <Stat Icon={FileText} label="سجلات بانتظار المراجعة" value={String(stats?.pending_tasks?.days_to_confirm ?? 0)} unit="سجل" tone="sky" onClick={()=>navigate("/training-provider/attendance", { state: { tab: "logs", status: "pending" } })}/>
         </div>
         <div className="mt-5 grid grid-cols-1 items-start gap-5 lg:grid-cols-[1.62fr_1fr]">
           <Box title="أحدث طلبات التدريب" action={<button onClick={()=>navigate("/training-provider/requests")} className="rounded-[6px] border border-[#E0E7F2] px-3 py-1 text-[11px]">عرض الكل <ChevronLeft size={13} className="mr-1 inline"/></button>}>

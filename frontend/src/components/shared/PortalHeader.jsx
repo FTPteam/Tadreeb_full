@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Menu, UserRound, Building2, Settings, LogOut } from "lucide-react";
+import { logout as endSession } from "../../api/auth";
 
 export default function PortalHeader({ role = "student", name, subtitle, initials, toggleEvent, logoutPath, onLogout, onUnavailable, onMenu }) {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function PortalHeader({ role = "student", name, subtitle, initial
   };
   const logout = () => {
     setPanel("");
+    endSession();
     if (onLogout) onLogout();
     else navigate(logoutPath || "/");
   };

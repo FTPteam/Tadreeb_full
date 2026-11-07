@@ -1,6 +1,5 @@
 import { getApplicationDraft, getSelectedOpportunity, clearApplicationDraft } from "./studentApplicationDraft";
-import { submitStudentApplication } from "../training-provider/providerApplicationsStore";
-import { getActiveStudentId, getStudentApplicationEligibility } from "../../services/studentTrainingEligibility";
+import { applyForTraining, updateProfile, uploadApplicationDocument } from "../../api/student";
 import AcademicFooter from "../../components/shared/AcademicFooter";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +25,9 @@ import Sidebar from "../../components/student/Sidebar";
 export default function TrainingDocuments() {
   const navigate = useNavigate();
   const [submissionError, setSubmissionError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  // The chosen files, uploaded to the backend when the application is sent.
+  const filesRef = useRef({});
 
   /* =========================================================
      INPUT REFS
@@ -44,18 +46,18 @@ export default function TrainingDocuments() {
 
   const [documents, setDocuments] = useState({
     transcript: {
-      uploaded: true,
-      fileName: "transcript_amal_2025.pdf",
-      size: "1.6 MB",
-      progress: 100,
+      uploaded: false,
+      fileName: "",
+      size: "",
+      progress: 0,
       error: "",
     },
 
     idCard: {
-      uploaded: true,
-      fileName: "national_id_card.pdf",
-      size: "550 KB",
-      progress: 100,
+      uploaded: false,
+      fileName: "",
+      size: "",
+      progress: 0,
       error: "",
     },
 
@@ -211,6 +213,8 @@ export default function TrainingDocuments() {
       return;
     }
 
+    filesRef.current[documentKey] = file;
+
     setUploadingKey(
       documentKey
     );
@@ -329,26 +333,49 @@ export default function TrainingDocuments() {
      NEXT
   ========================================================= */
 
-  const handleNext = () => {
-    const eligibility = getStudentApplicationEligibility(getActiveStudentId());
-    if (!eligibility.canApply) {
-      setSubmissionError(eligibility.reason);
-      return;
-    }
+  const DOCUMENT_TITLES = {
+    transcript: "كشف الدرجات",
+    idCard: "البطاقة الشخصية",
+    photo: "صورة شخصية",
+    recommendation: "خطاب توصية",
+    cv: "السيرة الذاتية",
+    extra: "مستند إضافي",
+  };
+
+  const handleNext = async () => {
     if (
       !requiredDocumentsComplete ||
-      isUploading
+      isUploading ||
+      submitting
     ) {
       return;
     }
-
-    const result = submitStudentApplication(getApplicationDraft() || {}, getSelectedOpportunity());
-    if (!result.ok) {
-      setSubmissionError(result.message);
+    const opportunityId = Number(getSelectedOpportunity());
+    if (!opportunityId) {
+      setSubmissionError("اختر فرصة تدريب أولًا.");
       return;
     }
-    clearApplicationDraft();
-    navigate("/student/applications");
+
+    setSubmitting(true);
+    setSubmissionError("");
+    try {
+      // The backend checks eligibility, the specialization and the open application (FR-06, FR-08).
+      const draft = getApplicationDraft() || {};
+      if (draft.phone || draft.email) {
+        await updateProfile({ phone: draft.phone, email: draft.email });
+      }
+      const application = await applyForTraining([opportunityId], { submit: false });
+      for (const [key, file] of Object.entries(filesRef.current)) {
+        await uploadApplicationDocument(application.id, DOCUMENT_TITLES[key] || key, file);
+      }
+      await applyForTraining([opportunityId]);
+      clearApplicationDraft();
+      navigate("/student/applications");
+    } catch (error) {
+      setSubmissionError(error.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   /* =========================================================

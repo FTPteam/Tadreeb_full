@@ -1,8 +1,8 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
-import { useEffect, useMemo, useState } from "react";
-import { getStudentVisibleOpportunities, subscribeOpportunities } from "../training-provider/opportunitiesStore";
-import { ORGANIZATIONS_EVENT } from "../admin/trainingOrganizationsStore";
+import { useMemo, useState } from "react";
 import { selectOpportunity } from "./studentApplicationDraft";
+import { useApi } from "../../api/useApi";
+import { fetchOpportunities } from "../../api/student";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -32,15 +32,9 @@ export default function TrainingOpportunities() {
     "عن بعد",
   ];
 
-  // Shared opportunity store; changes made in the provider portal are visible here.
-  const [providerOpportunities, setProviderOpportunities] = useState(() => getStudentVisibleOpportunities());
-  useEffect(() => {
-    const refresh = () => setProviderOpportunities(getStudentVisibleOpportunities());
-    const clean = subscribeOpportunities(refresh);
-    window.addEventListener(ORGANIZATIONS_EVENT, refresh);
-    return () => { clean(); window.removeEventListener(ORGANIZATIONS_EVENT, refresh); };
-  }, []);
-  const opportunities = providerOpportunities
+  // The backend only returns open opportunities in the student's specialization (FR-07).
+  const { data: providerOpportunities, error: loadError } = useApi(fetchOpportunities, [], []);
+  const opportunities = (providerOpportunities || [])
     .filter((opportunity) => opportunity.status === 'published')
     .map((opportunity, index) => ({
       id: opportunity.id,
@@ -49,8 +43,8 @@ export default function TrainingOpportunities() {
       category: opportunity.specialty,
       mode: opportunity.mode,
       location: opportunity.location || 'غزة',
-      date: opportunity.deadline || 'غير محدد',
-      hours: `${opportunity.hours || 0} ساعة`,
+      date: opportunity.startDate || 'غير محدد',
+      hours: `${opportunity.freeSeats ?? 0} مقاعد متاحة`,
       image: `/TrainingOpportunities-${index % 3}.jpg`,
       categoryBg: '#E6F8FB', categoryText: '#287E8C',
     }));
@@ -866,7 +860,7 @@ export default function TrainingOpportunities() {
                       xl:leading-[20px]
                     "
                   >
-                    جرّب تغيير كلمة البحث أو اختيار تصنيف آخر
+                    {loadError || "جرّب تغيير كلمة البحث أو اختيار تصنيف آخر"}
                   </p>
 
                   <button

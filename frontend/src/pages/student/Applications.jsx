@@ -1,8 +1,18 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
-import { useEffect, useMemo, useState } from "react";
-import { subscribeApplications } from "../training-provider/providerApplicationsStore";
-import { getMyApplications } from "./studentApplicationView";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useApi } from "../../api/useApi";
+import { fetchMyApplications } from "../../api/student";
+
+// Backend status → the page's filter label and colour.
+const STATUS_VIEW = {
+  draft: ["قيد الانتظار", "waiting"],
+  submitted: ["قيد الانتظار", "waiting"],
+  under_review: ["قيد المراجعة", "waiting"],
+  needs_changes: ["يحتاج تعديل", "revision"],
+  rejected: ["مرفوض", "rejected"],
+  withdrawn: ["مرفوض", "rejected"],
+};
 
 import {
   ArrowLeft,
@@ -46,30 +56,24 @@ export default function Applications() {
   ========================================================= */
 
   // Keep the displayed requests scoped to the active student; no cross-account demo fixtures.
-  const [liveRequests, setLiveRequests] = useState(getMyApplications);
-  useEffect(() => {
-    const refresh = () => setLiveRequests(getMyApplications());
-    const unsubscribe = subscribeApplications(refresh);
-    window.addEventListener('admin-training-requests-updated', refresh);
-    window.addEventListener('storage', refresh);
-    return () => {
-      unsubscribe();
-      window.removeEventListener('admin-training-requests-updated', refresh);
-      window.removeEventListener('storage', refresh);
+  const liveRequests = useApi(fetchMyApplications, [], []).data || [];
+  const applications = liveRequests.map(row => {
+    const [status, statusType] = STATUS_VIEW[row.backendStatus] || ["مقبول", "accepted"];
+    const lastChange = row.history[row.history.length - 1]?.created_at || row.submittedAt || "";
+    return {
+      id: row.id,
+      title: row.opportunityTitle,
+      organization: row.organizationName,
+      location: row.location,
+      submittedAt: String(row.date || '').replaceAll('-', '/'),
+      updatedAt: lastChange.slice(0, 10).replaceAll('-', '/'),
+      hours: row.startDate ? `${row.startDate} → ${row.endDate}` : 'غير محدد',
+      status,
+      statusType,
+      // The exact stage, e.g. «قيد التدريب», with the reason when there is one.
+      description: row.note,
     };
-  }, []);
-  const applications = liveRequests.map(row => ({
-    id: row.id,
-    title: row.opportunityTitle,
-    organization: row.organizationName,
-    location: row.location,
-    submittedAt: String(row.date || '').replaceAll('-', '/'),
-    updatedAt: String(row.decidedAt || row.date || '').replaceAll('-', '/'),
-    hours: row.requiredHours ? `${row.requiredHours} ساعة` : 'غير محدد',
-    status: row.overallStatus === 'accepted' ? 'مقبول' : row.overallStatus === 'rejected' ? 'مرفوض' : 'قيد الانتظار',
-    statusType: row.overallStatus === 'accepted' ? 'accepted' : row.overallStatus === 'rejected' ? 'rejected' : 'waiting',
-    description: row.note,
-  }));
+  });
 
   /* =========================================================
      FILTER APPLICATIONS

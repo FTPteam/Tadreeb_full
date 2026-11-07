@@ -1,9 +1,8 @@
 import PortalHeader from "../shared/PortalHeader";
-import { getProviderProfile } from "../../pages/training-provider/providerProfileStore";
+import { getCurrentUser } from "../../api/auth";
 
 export default function Header({ onMenu, onLogout, onUnavailable }) {
-  const profile = getProviderProfile();
-  const organizationName = profile.name || "جهة التدريب";
+  const organizationName = getCurrentUser()?.full_name || "جهة التدريب";
   return (
     <PortalHeader
       role="provider"
