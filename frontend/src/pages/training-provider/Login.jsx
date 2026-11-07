@@ -83,8 +83,12 @@ export default function Login() {
 
     // TEMP demo flow: credentials are not authenticated until the backend is connected.
     const organization = findProviderOrganizationByEmail(formData.email);
-    if (organization) setActiveProviderOrganization(organization.id);
-    else setActiveProviderOrganization("1"); // Keep the existing seeded demo account available.
+    if (!organization) {
+      setErrors(prev => ({ ...prev, email: "هذا البريد غير مسجل كجهة تدريب. أنشئ حساب جهة أولًا أو استخدم البريد التجريبي المسجل." }));
+      return;
+    }
+    // Temporary demo session: the password is NOT verified until the backend is connected.
+    setActiveProviderOrganization(organization.id);
     navigate("/training-provider/dashboard", { replace: true });
   };
 

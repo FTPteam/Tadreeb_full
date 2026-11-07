@@ -1,6 +1,7 @@
 // Browser-only integration bridge. This is NOT an authorization boundary.
 // The backend must own approvals and create trainee records transactionally.
 import { upsertApprovedStudentTrainee } from "../pages/training-provider/traineesStore";
+import { deriveApplicationProgress } from "./trainingLifecycle";
 
 const ADMIN_KEY = "cis-field-training-requests-v1";
 
@@ -23,9 +24,7 @@ export function getAcademicDecision(applicationId) {
 
 export function getOverallApplicationStatus(application, academicDecision = getAcademicDecision(application?.id)) {
   if (!application) return "pending";
-  if (academicDecision === "rejected" || application.status === "rejected") return "rejected";
-  if (academicDecision === "approved" && application.status === "accepted") return "accepted";
-  return "pending";
+  return deriveApplicationProgress(application.status, academicDecision).status;
 }
 
 export function reconcileTrainingApplication(application, academicDecision = getAcademicDecision(application?.id)) {

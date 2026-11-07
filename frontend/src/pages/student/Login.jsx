@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getStudent } from "../admin/studentsStore";
+import { setActiveStudentId } from "../../services/studentTrainingEligibility";
 
 import {
   ArrowLeft,
@@ -18,9 +20,10 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [loginError, setLoginError] = useState("");
 
   const [formData, setFormData] = useState({
-    studentId: "20220845",
+    studentId: "20231234",
     password: "123456789012",
   });
 
@@ -36,6 +39,19 @@ export default function Login() {
   const handleSubmit = (event) => {
     event.preventDefault();
 
+    const id = String(formData.studentId || "").trim();
+    if (!id || !formData.password.trim()) {
+      setLoginError("يرجى إدخال الرقم الجامعي وكلمة المرور.");
+      return;
+    }
+    // Prototype only: selecting a known demo student is NOT authentication.
+    // The backend will verify credentials and provide the authenticated user.
+    if (!getStudent(id)) {
+      setLoginError("الرقم الجامعي غير موجود في بيانات العرض التجريبية.");
+      return;
+    }
+    setActiveStudentId(id);
+    setLoginError("");
     navigate("/student/dashboard");
   };
 
@@ -344,6 +360,8 @@ export default function Login() {
                 lg:max-w-[440px]
               "
             >
+              {loginError && <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-700">{loginError}</p>}
+
               {/* WELCOME */}
 
               <div className="text-right">

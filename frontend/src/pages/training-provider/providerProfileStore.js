@@ -4,6 +4,17 @@ import { getActiveProviderOrganization, updateActiveProviderOrganization } from 
 export const PROFILE_KEY = 'cis-provider-profile-v1';
 export const RENEWAL_KEY = 'cis-provider-renewals-v1';
 export const PROFILE_EVENT = 'cis-provider-profile-updated';
+// Keep each organization's draft profile and renewal requests isolated in the demo browser.
+// The backend will replace these keys with authenticated organization-scoped APIs.
+const profileKey = (id) => `${PROFILE_KEY}:${String(id)}`;
+const renewalKey = (id) => `${RENEWAL_KEY}:${String(id)}`;
+const activeId = () => String(getActiveProviderOrganization()?.id || '1');
+const providerDefaults = (organization) => String(organization?.id ?? '1') === '1'
+  ? DEFAULT_PROFILE
+  : { ...DEFAULT_PROFILE, name: '', activity: '', location: '', established: '', email: '', phone: '', capacity: 0, currentTrainees: 0, bio: '', specialties: [] };
+function readLegacyForDefaultOrganization(key) {
+  return activeId() === '1' ? localStorage.getItem(key) : null;
+}
 
 export const SPECIALTIES = ACADEMIC_PROGRAMS;
 
@@ -38,42 +49,43 @@ export const DEFAULT_STAGES = [
 function canStore() { return typeof window !== 'undefined' && !!window.localStorage; }
 export function getProviderProfile() {
   const organization = getActiveProviderOrganization();
+  const defaults = providerDefaults(organization);
   const organizationProfile = organization ? {
     organizationId: organization.id,
     name: organization.name,
-    activity: organization.type || DEFAULT_PROFILE.activity,
-    location: organization.location || DEFAULT_PROFILE.location,
-    email: organization.email || DEFAULT_PROFILE.email,
-    phone: organization.phone || DEFAULT_PROFILE.phone,
-    capacity: Number(organization.capacity ?? organization.seats ?? DEFAULT_PROFILE.capacity),
+    activity: organization.type || defaults.activity,
+    location: organization.location || defaults.location,
+    email: organization.email || defaults.email,
+    phone: organization.phone || defaults.phone,
+    capacity: Number(organization.capacity ?? organization.seats ?? defaults.capacity),
     approvalStatus: organization.status || "pending",
     reviewNote: organization.reviewNote || "",
-    established: organization.established || DEFAULT_PROFILE.established,
-    bio: organization.bio || DEFAULT_PROFILE.bio,
+    established: organization.established || defaults.established,
+    bio: organization.bio || defaults.bio,
     specialties: Array.isArray(organization.specializations) && organization.specializations.length
-      ? organization.specializations : [...DEFAULT_PROFILE.specialties],
+      ? organization.specializations : [...defaults.specialties],
   } : {};
-  if (!canStore()) return { ...DEFAULT_PROFILE, ...organizationProfile, specialties: [...(organizationProfile.specialties || DEFAULT_PROFILE.specialties)] };
+  if (!canStore()) return { ...defaults, ...organizationProfile, specialties: [...(organizationProfile.specialties || defaults.specialties)] };
   try {
-    const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
+    const saved = JSON.parse(localStorage.getItem(profileKey(activeId())) || readLegacyForDefaultOrganization(PROFILE_KEY) || "null");
     const localProfile = saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
     return {
-      ...DEFAULT_PROFILE,
+      ...defaults,
       ...localProfile,
       ...organizationProfile,
       specialties: Array.isArray(organizationProfile.specialties)
         ? organizationProfile.specialties
         : Array.isArray(localProfile.specialties)
           ? localProfile.specialties.filter(x => SPECIALTIES.includes(x))
-          : [...SPECIALTIES],
+          : [...defaults.specialties],
       capacity: Number.isFinite(Number(organizationProfile.capacity ?? localProfile.capacity))
         && Number(organizationProfile.capacity ?? localProfile.capacity) > 0
         ? Number(organizationProfile.capacity ?? localProfile.capacity)
-        : DEFAULT_PROFILE.capacity,
-      currentTrainees: DEFAULT_PROFILE.currentTrainees,
+        : defaults.capacity,
+      currentTrainees: Number(organization?.currentTrainees ?? 0),
     };
   } catch {
-    return { ...DEFAULT_PROFILE, ...organizationProfile, specialties: [...(organizationProfile.specialties || SPECIALTIES)] };
+    return { ...defaults, ...organizationProfile, specialties: [...(organizationProfile.specialties || defaults.specialties)] };
   }
 }
 export function saveProviderProfile(patch) {
@@ -91,7 +103,7 @@ export function saveProviderProfile(patch) {
     bio: next.bio,
     specializations: next.specialties,
   });
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+  localStorage.setItem(profileKey(activeId()), JSON.stringify(next));
   window.dispatchEvent(new Event(PROFILE_EVENT));
   return next;
 }
@@ -105,14 +117,14 @@ export function resubmitProviderAccreditation() {
 export function getRenewalRequests() {
   if (!canStore()) return [];
   try {
-    const result = JSON.parse(localStorage.getItem(RENEWAL_KEY) || '[]');
+    const result = JSON.parse(localStorage.getItem(renewalKey(activeId())) || readLegacyForDefaultOrganization(RENEWAL_KEY) || '[]');
     return Array.isArray(result) ? result : [];
   } catch { return []; }
 }
 export function saveRenewalRequest({ documentName, notes }) {
   if (!canStore()) throw Error('storage-unavailable');
-  const request = { id: `renewal-${Date.now()}`, documentName: documentName.trim(), notes: notes.trim(), status: 'local-draft', createdAt: new Date().toISOString() };
-  localStorage.setItem(RENEWAL_KEY, JSON.stringify([request, ...getRenewalRequests()]));
+  const request = { id: `renewal-${Date.now()}`, organizationId: activeId(), documentName: documentName.trim(), notes: notes.trim(), status: 'local-draft', createdAt: new Date().toISOString() };
+  localStorage.setItem(renewalKey(activeId()), JSON.stringify([request, ...getRenewalRequests()]));
   window.dispatchEvent(new Event(PROFILE_EVENT));
   return request;
 }

@@ -16,6 +16,10 @@ export function setActiveStudentId(id) {
   if (typeof window !== 'undefined') sessionStorage.setItem(SESSION_KEY, String(id || '').trim());
 }
 
+export function clearActiveStudentId() {
+  if (typeof window !== 'undefined') sessionStorage.removeItem(SESSION_KEY);
+}
+
 export function getStudentApplicationEligibility(studentId = getActiveStudentId()) {
   const id = String(studentId || '').trim();
   if (!id) return { canApply: false, reason: 'الرقم الجامعي غير متوفر. سجّل دخولك أولًا.' };

@@ -56,7 +56,7 @@ export default function FinalEvaluationReview() {
       status: "approved",
       finalScore,
       approvedAt: new Date().toLocaleDateString("en-CA"),
-      approvedBy: "د. سامر يوسف",
+      approvedBy: null, // Authenticated reviewer will come from the backend.
     };
 
     try {
@@ -272,7 +272,7 @@ export default function FinalEvaluationReview() {
                             }
                             reviewer={
                               evaluation.academicSupervisor ||
-                              "د. سامر يوسف"
+                              "غير محدد"
                             }
                             completed={evaluation.academicScore != null}
                           />

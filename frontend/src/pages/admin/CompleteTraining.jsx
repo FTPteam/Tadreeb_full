@@ -77,7 +77,7 @@ export default function CompleteTraining() {
       ...latest,
       status: "completed",
       completedAt: new Date().toLocaleDateString("en-CA"),
-      completedBy: "د. سامر يوسف",
+      completedBy: null, // Authenticated reviewer will come from the backend.
     };
 
     try {

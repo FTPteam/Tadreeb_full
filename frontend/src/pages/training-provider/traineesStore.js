@@ -1,5 +1,6 @@
 import { getOpportunity } from './opportunitiesStore.js';
 import { getActiveProviderOrganizationId } from '../../services/providerOrganization.js';
+import { findOtherActivePlacement } from '../../services/trainingLifecycle.js';
 const KEY='cis-provider-trainees-v1', EVENT='cis-provider-trainees-updated';
 const names=['أمل أحمد صيام','إسلام جمال القصاص','آية رامي بدير','بسمة إياد النجار','تالا ماهر الجدية','جنى وليد الشاعر','دعاء ياسر أبو عودة','رغد عماد أبو سليم','زياد أسامة حمد','سارة عبد الرحمن','ليلى حسن أبو شمالة','لينا محمود شعث','محمد إبراهيم رضوان','محمود إبراهيم رضوان','مصطفى هاني العرجا','يوسف نبيل عوض','كرم محمد النجار','عمر خليل الحداد','ريم سعيد الكرد','إسلام عادل حسن','رنا علي عمر','أحمد مصطفى'];
 const supervisors=['خالد عودة','رنا الحلو','أحمد شحادة'];
@@ -37,7 +38,16 @@ export function reviewLog(id,logId,decision,note=''){
  if(decision==='revision'&&!note.trim())return {ok:false,message:'ملاحظة المراجعة مطلوبة عند طلب التعديل'};
  return updateTrainee(id,{logs:t.logs.map(l=>l.id===logId?{...l,status:decision,reviewNote:note.trim(),reviewedAt:new Date().toISOString()}:l)});
 }
-export function saveEvaluation(id,scores,note){const t=getTrainee(id);if(!t)return {ok:false,message:'المتدرب غير موجود'};if(scores.length!==5||scores.some(v=>!Number.isInteger(v)||v<1||v>5))return {ok:false,message:'يرجى تقييم جميع البنود من 1 إلى 5'};return updateTrainee(id,{evaluation:{scores,note:note.trim(),by:'خالد عودة',date:new Date().toISOString().slice(0,10)}});}
+export function saveEvaluation(id,scores,note){
+ const t=getTrainee(id);
+ if(!t)return {ok:false,message:'المتدرب غير موجود'};
+ if(t.status==='not_started')return {ok:false,message:'لا يمكن تقييم متدرب لم يبدأ التدريب بعد'};
+ if(t.status==='completed')return {ok:false,message:'التدريب منتهٍ؛ تعديل التقييم يتطلب إجراءً رسميًا من الإدارة'};
+ if(!Array.isArray(scores)||scores.length!==5||scores.some(v=>!Number.isInteger(v)||v<1||v>5))return {ok:false,message:'يرجى تقييم جميع البنود من 1 إلى 5'};
+ // Display the assigned supervisor, not a hard-coded person. Only the backend can
+ // verify who actually submitted the evaluation.
+ return updateTrainee(id,{evaluation:{scores:[...scores],note:String(note||'').trim(),by:t.supervisor||'غير محدد',date:new Date().toISOString().slice(0,10)}});
+}
 export function completionChecklist(t){return [{ok:Number(t.completedHours)>=Number(t.requiredHours),text:`إكمال الساعات المطلوبة (${t.completedHours} من ${t.requiredHours})`},{ok:!!t.evaluation,text:'اكتمال تقييم المتدرب'},{ok:!(t.logs||[]).some(l=>l.status==='pending'||l.status==='revision'),text:'اعتماد جميع السجلات اليومية'}];}
 export function completeTrainee(id){const t=getTrainee(id);if(!t)return {ok:false,message:'المتدرب غير موجود'};if(completionChecklist(t).some(x=>!x.ok))return {ok:false,message:'متطلبات إنهاء التدريب غير مكتملة'};return updateTrainee(id,{status:'completed',closedAt:new Date().toISOString().slice(0,10)});}
 export function exportTraineesCsv(items){const rows=[['الاسم','الرقم الجامعي','الفرصة','المشرف','الساعات المنجزة','المطلوبة','الحضور','الحالة'],...items.map(t=>[t.name,t.studentId,t.opportunity,t.supervisor,t.completedHours,t.requiredHours,t.attendance??'',({active:'قيد التدريب',completed:'منتهٍ',not_started:'لم يبدأ'})[t.status]])];const cell=x=>`"${String(x??'').replace(/^\s*[=+@-]/,"'$&").replace(/"/g,'""')} "`.trimEnd();const csv='\uFEFF'+rows.map(r=>r.map(cell).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='provider-trainees.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -52,10 +62,16 @@ export function upsertApprovedStudentTrainee(application) {
   const items = getAllTrainees();
   const existing = items.find(item =>
     String(item.applicationId || "") === String(application.id) ||
-    (String(item.studentId) === String(application.studentId) &&
+    (!item.applicationId && String(item.studentId) === String(application.studentId) &&
       String(item.opportunityId) === String(application.opportunityId))
   );
   if (existing) return { ok: true, created: false, record: existing };
+  // Final mutation-boundary guard: independent of approval button checks.
+  // Backend must enforce this within a DB transaction with a uniqueness policy.
+  const otherActivePlacement = findOtherActivePlacement(items, application.studentId, application.id);
+  if (otherActivePlacement) {
+    return { ok: false, message: 'لدى الطالب تدريب فعّال آخر؛ لا يمكن إنشاء تدريب ثانٍ.', conflict: otherActivePlacement };
+  }
   const opportunity = getOpportunity(application.opportunityId);
   if (!opportunity) return { ok: false, message: "فرصة التدريب غير موجودة" };
   const record = {

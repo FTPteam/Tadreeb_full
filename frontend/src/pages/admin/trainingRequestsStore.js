@@ -224,7 +224,17 @@ export function decideRequest(request, status) {
     if (status === "approved" && !canAcceptOrganization(current.organization, current.organizationId)) {
       throw new Error("جهة التدريب غير معتمدة لدى الإدارة. يجب اعتماد الجهة أولًا.");
     }
-    if (status === "approved") assertSingleActiveTraining(current);
+    if (status === "approved") {
+      const providerDecision = getAllProviderApplications().find(row =>
+        row.source === "student" &&
+        String(row.id) === String(current.id) &&
+        String(row.studentId) === String(current.studentId)
+      );
+      if (providerDecision?.status === "rejected") {
+        throw new Error("جهة التدريب رفضت هذا الطلب. لا يمكن اعتماده أكاديميًا؛ يمكن للطالب التقديم لفرصة أخرى.");
+      }
+      assertSingleActiveTraining(current);
+    }
     const saved = saveRequest({ ...current, ...request, status });
     // A student account may not yet exist in the admin prototype registry.
     // Create a minimal record only when the academic approval succeeds.
