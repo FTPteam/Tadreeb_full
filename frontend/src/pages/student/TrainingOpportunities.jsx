@@ -51,7 +51,7 @@ export default function TrainingOpportunities() {
       location: opportunity.location || 'غزة',
       date: opportunity.deadline || 'غير محدد',
       hours: `${opportunity.hours || 0} ساعة`,
-      image: `/TrainingOpportunities-${index % 3}.jpg`,
+      image: `/TrainingOpportunities-${index % 3}.webp`,
       categoryBg: '#E6F8FB', categoryText: '#287E8C',
     }));
 
@@ -531,6 +531,10 @@ export default function TrainingOpportunities() {
                           <img
                             src={opportunity.image}
                             alt={opportunity.title}
+                            loading="lazy"
+                            decoding="async"
+                            width="480"
+                            height="320"
                             className="
                               absolute
                               inset-0
