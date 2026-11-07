@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getStudent } from "../admin/studentsStore";
 import { setActiveStudentId } from "../../services/studentTrainingEligibility";
+import { HOME_BY_ROLE, login, logout } from "../../api/auth";
 
 import {
   ArrowLeft,
@@ -23,9 +23,10 @@ export default function Login() {
   const [loginError, setLoginError] = useState("");
 
   const [formData, setFormData] = useState({
-    studentId: "20231234",
-    password: "123456789012",
+    studentId: "",
+    password: "",
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -36,7 +37,7 @@ export default function Login() {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     const id = String(formData.studentId || "").trim();
@@ -44,15 +45,22 @@ export default function Login() {
       setLoginError("يرجى إدخال الرقم الجامعي وكلمة المرور.");
       return;
     }
-    // Prototype only: selecting a known demo student is NOT authentication.
-    // The backend will verify credentials and provide the authenticated user.
-    if (!getStudent(id)) {
-      setLoginError("الرقم الجامعي غير موجود في بيانات العرض التجريبية.");
-      return;
-    }
-    setActiveStudentId(id);
+    setSubmitting(true);
     setLoginError("");
-    navigate("/student/dashboard");
+    try {
+      const user = await login(id, formData.password);
+      if (user.role !== "student") {
+        logout();
+        setLoginError("هذا الحساب ليس حساب طالب. استخدم بوابة الدخول الخاصة بدورك.");
+        return;
+      }
+      setActiveStudentId(user.username);
+      navigate(HOME_BY_ROLE.student);
+    } catch (error) {
+      setLoginError(error.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -674,6 +682,7 @@ export default function Login() {
 
               <button
                 type="submit"
+                disabled={submitting}
                 dir="ltr"
                 className="
                   mt-[20px]

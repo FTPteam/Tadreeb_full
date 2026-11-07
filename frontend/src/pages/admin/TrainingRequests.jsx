@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 import Sidebar from "../../components/admin/Sidebar";
-import { getRequests } from "./trainingRequestsStore";
+import { fetchRequests } from "../../api/admin";
 
 // =====================================================
 // DATA & STORAGE
@@ -53,7 +53,7 @@ export default function TrainingRequests() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [requests, setRequests] = useState(getRequests);
+  const [requests, setRequests] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("newest");
@@ -65,29 +65,14 @@ export default function TrainingRequests() {
   // DATA REFRESH
   // =====================================================
 
-  const refreshRequests = () => {
-    setRequests(getRequests());
-  };
+  const refreshRequests = () => fetchRequests().then(setRequests).catch(() => {});
 
+  // Reload from the backend on every visit and when the tab regains focus.
   useEffect(() => {
     refreshRequests();
+    window.addEventListener("focus", refreshRequests);
+    return () => window.removeEventListener("focus", refreshRequests);
   }, [location.key]);
-
-  useEffect(() => {
-    const refresh = () => setRequests(getRequests());
-
-    window.addEventListener("storage", refresh);
-    window.addEventListener("admin-training-requests-updated", refresh);
-    window.addEventListener("cis-provider-applications-updated", refresh);
-    window.addEventListener("focus", refresh);
-
-    return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener("admin-training-requests-updated", refresh);
-      window.removeEventListener("cis-provider-applications-updated", refresh);
-      window.removeEventListener("focus", refresh);
-    };
-  }, []);
 
   // =====================================================
   // FILTERING AND SORTING

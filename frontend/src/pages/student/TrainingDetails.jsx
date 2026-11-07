@@ -1,7 +1,6 @@
 import { getSelectedOpportunity } from "./studentApplicationDraft";
-import { getStudentVisibleOpportunity } from "../training-provider/opportunitiesStore";
-import { getApplications } from "../training-provider/providerApplicationsStore";
-import { getActiveStudentId, getStudentApplicationEligibility } from "../../services/studentTrainingEligibility";
+import { useApi } from "../../api/useApi";
+import { fetchApplyEligibility, fetchOpportunity } from "../../api/student";
 import AcademicFooter from "../../components/shared/AcademicFooter";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -29,10 +28,13 @@ import Sidebar from "../../components/student/Sidebar";
 
 export default function TrainingDetails() {
   const navigate = useNavigate();
-  const selectedOpportunity = getStudentVisibleOpportunity(getSelectedOpportunity());
-  const currentStudentId = getActiveStudentId();
-  const trainingEligibility = getStudentApplicationEligibility(currentStudentId);
-  const alreadyApplied = getApplications().some(row => row.source === 'student' && row.opportunityId === selectedOpportunity?.id && String(row.studentId) === currentStudentId);
+  const selectedId = getSelectedOpportunity();
+  const selectedOpportunity = useApi(() => (selectedId ? fetchOpportunity(selectedId) : null), [selectedId]).data;
+  const trainingEligibility = useApi(fetchApplyEligibility, [], { canApply: false, reason: "", application: null }).data
+    || { canApply: false, reason: "", application: null };
+  const alreadyApplied = Boolean(
+    trainingEligibility.application?.preferences?.some(p => String(p.opportunity) === String(selectedOpportunity?.id)),
+  );
 
 
   /*
@@ -119,7 +121,7 @@ export default function TrainingDetails() {
     currentApplicationState.icon;
 
   const handleApply = () => {
-    if (!getStudentApplicationEligibility(currentStudentId).canApply || applicationStatus !== "available" || alreadyApplied || !selectedOpportunity || selectedOpportunity.status !== 'published') {
+    if (!trainingEligibility.canApply || applicationStatus !== "available" || alreadyApplied || !selectedOpportunity || selectedOpportunity.status !== 'published') {
       return;
     }
 

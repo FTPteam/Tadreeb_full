@@ -1,9 +1,10 @@
 import { ACADEMIC_PROGRAMS } from "../../constants/academicPrograms";
-import { getStudent } from "../admin/studentsStore";
-import { getActiveStudentId, getStudentApplicationEligibility } from "../../services/studentTrainingEligibility";
 import { getApplicationDraft, saveApplicationDraft } from "./studentApplicationDraft";
 import AcademicFooter from "../../components/shared/AcademicFooter";
 import { useState } from "react";
+import { getCurrentUser } from "../../api/auth";
+import { fetchApplyEligibility, fetchProfile } from "../../api/student";
+import { useApi } from "../../api/useApi";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -28,19 +29,34 @@ export default function TrainingApplication() {
      FORM DATA
   ========================================================= */
 
-  const currentStudentId = getActiveStudentId();
-  const studentEligibility = getStudentApplicationEligibility(currentStudentId);
+  const currentStudentId = String(getCurrentUser()?.username || "");
+  const studentEligibility = useApi(fetchApplyEligibility, [], { canApply: true, reason: "" }).data
+    || { canApply: false, reason: "" };
+  const profile = useApi(fetchProfile, []).data;
   const draft = getApplicationDraft();
-  const [formData, setFormData] = useState(() => (draft && String(draft.studentId) === currentStudentId ? draft : {
-    fullName: getStudent(currentStudentId)?.name || "",
+  const hasDraft = Boolean(draft && String(draft.studentId) === currentStudentId);
+  const [formData, setFormData] = useState(() => (hasDraft ? draft : {
+    fullName: getCurrentUser()?.full_name || "",
     studentId: currentStudentId,
-    major: "تكنولوجيا المعلومات",
+    major: "",
     academicYear: "السنة الثالثة (مستوفية للشروط)",
-    phone: "0599123456",
-    email: "amal@example.com",
-    motivation:
-      "أرغب في تعزيز مهاراتي العملية واكتساب الخبرة في مجال تقنية المعلومات.",
+    phone: "",
+    email: "",
+    motivation: "",
   }));
+
+  // Fill the read-only details from the student's record once it loads.
+  const [prefilled, setPrefilled] = useState(false);
+  if (profile && !hasDraft && !prefilled) {
+    setPrefilled(true);
+    setFormData(previous => ({
+      ...previous,
+      fullName: profile.full_name || previous.fullName,
+      major: profile.specialization_name || profile.department_name || previous.major,
+      phone: previous.phone || profile.phone || "",
+      email: previous.email || profile.email || "",
+    }));
+  }
 
   const [errors, setErrors] = useState({});
 
@@ -155,9 +171,8 @@ export default function TrainingApplication() {
   ========================================================= */
 
   const handleNext = () => {
-    const eligibility = getStudentApplicationEligibility(currentStudentId);
-    if (!eligibility.canApply) {
-      setErrors({ form: eligibility.reason });
+    if (!studentEligibility.canApply) {
+      setErrors({ form: studentEligibility.reason });
       return;
     }
     if (String(formData.studentId) !== currentStudentId) {

@@ -1,13 +1,12 @@
 import PortalHeader from "../shared/PortalHeader";
 import { useNavigate } from "react-router-dom";
-import { getStudent } from "../../pages/admin/studentsStore";
-import { clearActiveStudentId, getActiveStudentId } from "../../services/studentTrainingEligibility";
+import { clearActiveStudentId } from "../../services/studentTrainingEligibility";
+import { getCurrentUser } from "../../api/auth";
 
 export default function Header() {
   const navigate = useNavigate();
-  const studentId = getActiveStudentId();
-  const student = getStudent(studentId);
-  const displayName = student?.name || `طالب ${studentId}`;
+  const user = getCurrentUser();
+  const displayName = user?.full_name || (user ? `طالب ${user.username}` : "طالب");
   const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("");
   return <PortalHeader
     role="student"

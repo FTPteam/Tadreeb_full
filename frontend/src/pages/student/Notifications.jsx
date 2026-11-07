@@ -1,5 +1,5 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -14,78 +14,52 @@ import {
 
 import Header from "../../components/student/Header";
 import Sidebar from "../../components/student/Sidebar";
+import { useApi } from "../../api/useApi";
+import { fetchNotifications, markAllNotificationsRead, markNotificationRead } from "../../api/student";
+
+// Notification kind → its label and the page it opens.
+const KIND_VIEW = {
+  application: ["طلب ميداني", "/student/applications"],
+  training: ["التدريب", "/student/daily-training-log"],
+  report: ["التقارير", "/student/reports"],
+  announcement: ["إعلانات عامة", "/student/dashboard"],
+};
+
+async function loadNotifications() {
+  return (await fetchNotifications()).map(item => ({
+    ...item,
+    type: item.kind,
+    category: KIND_VIEW[item.kind]?.[0] || "إشعار",
+    target: KIND_VIEW[item.kind]?.[1] || "/student/dashboard",
+    time: new Date(item.time).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }),
+  }));
+}
 
 export default function Notifications() {
   const navigate = useNavigate();
 
   const [filter, setFilter] = useState("all");
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "application",
-      title: "تحديث حالة طلب التدريب",
-      description:
-        'تم تحديث حالة طلبك لفرصة التدريب في "شركة القدس للاتصالات والتكنولوجيا" إلى "مقبول مبدئيا".',
-      category: "طلب ميداني",
-      time: "اليوم — 10:30 ص",
-      unread: true,
-      target: "/student/applications",
-    },
-    {
-      id: 2,
-      type: "training",
-      title: "تحديث متعلق بالتدريب",
-      description:
-        "يوجد تحديث جديد في ملف تدريبك الميداني تم إضافته بواسطة المشرف الأكاديمي د. محمد الأسطل.",
-      category: "ملف السجل اليومي",
-      time: "أمس — 12:00 م",
-      unread: true,
-      target: "/student/training-profile",
-    },
-    {
-      id: 3,
-      type: "report",
-      title: "تنبيه بخصوص التقرير",
-      description:
-        "يرجى مراجعة حالة التقرير الأسبوعي الرابع؛ تم اعتماد التقرير بنجاح مع إضافة ملاحظات توجيهية هامة للتطوير المهني.",
-      category: "التقارير",
-      time: "من يومين — 09:15 ص",
-      unread: false,
-      target: "/student/reports",
-    },
-    {
-      id: 4,
-      type: "announcement",
-      title: "إعلان تدريبي جديد",
-      description:
-        'تفاصيل الإعلان: ورشة عمل إرشادية حول "أخلاقيات العمل الميداني وإعداد التقرير النهائي"، يوم الأحد القادم عبر القاعة الافتراضية.',
-      category: "إعلانات عامة",
-      time: "2025/11/28 — 02:00 م",
-      unread: false,
-      target: "/student/dashboard",
-    },
-  ]);
-
-  const unreadCount = useMemo(
-    () =>
-      notifications.filter(
-        (notification) => notification.unread
-      ).length,
-    [notifications]
+  const loaded = useApi(loadNotifications, [], []);
+  const [readIds, setReadIds] = useState(() => new Set());
+  const notifications = (loaded.data || []).map(item =>
+    readIds.has(item.id) ? { ...item, unread: false } : item,
   );
+  const setNotifications = update => {
+    const next = update(notifications);
+    setReadIds(new Set(next.filter(item => !item.unread).map(item => item.id)));
+  };
 
-  const visibleNotifications = useMemo(() => {
-    if (filter === "unread") {
-      return notifications.filter(
-        (notification) => notification.unread
-      );
-    }
+  const unreadCount = notifications.filter(
+    (notification) => notification.unread
+  ).length;
 
-    return notifications;
-  }, [filter, notifications]);
+  const visibleNotifications = filter === "unread"
+    ? notifications.filter((notification) => notification.unread)
+    : notifications;
 
   const markAllAsRead = () => {
+    markAllNotificationsRead().catch(() => {});
     setNotifications((previous) =>
       previous.map((notification) => ({
         ...notification,
@@ -95,6 +69,7 @@ export default function Notifications() {
   };
 
   const openNotification = (notification) => {
+    if (notification.unread) markNotificationRead(notification.id).catch(() => {});
     setNotifications((previous) =>
       previous.map((item) =>
         item.id === notification.id

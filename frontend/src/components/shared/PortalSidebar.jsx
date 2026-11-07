@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { clearActiveStudentId } from "../../services/studentTrainingEligibility";
+import { logout as endSession } from "../../api/auth";
 import { LayoutDashboard, Home, BriefcaseBusiness, Inbox, Users, CalendarCheck, Star, UserRoundCog, ChartNoAxesColumn, Bell, Building2, Settings, LogOut, X, ClipboardList, FileText, CalendarDays, CircleCheck, GraduationCap, FileCheck, BadgeCheck, Activity, UserRound } from "lucide-react";
 
 const menus = {
@@ -45,6 +46,7 @@ export default function PortalSidebar({ role = "student", open, onClose, onLogou
   const handleLogout = () => {
     close();
     if (role === "student") clearActiveStudentId();
+    endSession();
     if (onLogout) onLogout();
     else navigate(role === "provider" ? "/training-provider/login" : role === "admin" ? "/admin/login" : "/");
   };
