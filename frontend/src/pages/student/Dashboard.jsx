@@ -1,5 +1,9 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
 import { useNavigate } from "react-router-dom";
+import { getMyApplications } from "./studentApplicationView";
+import { getCurrentTraining } from "../../services/dailyTrainingLogs";
+import { getStudentVisibleOpportunities } from "../training-provider/opportunitiesStore";
+import { selectOpportunity } from "./studentApplicationDraft";
 
 import {
   Clock3,
@@ -22,79 +26,26 @@ export default function Dashboard() {
 
   const currentYear = new Date().getFullYear();
 
+  // All values below come from the current demo stores, never fixed promotional counts.
+  const training = getCurrentTraining();
+  const myApplications = getMyApplications();
+  const availableOpportunities = getStudentVisibleOpportunities().filter(o => o.status === 'published');
   const statistics = [
-    {
-      title: "إجمالي الساعات",
-      value: "120",
-      icon: Clock3,
-    },
-    {
-      title: "تدريبي الحالي",
-      value: "1",
-      icon: BriefcaseBusiness,
-    },
-    {
-      title: "طلباتي الحالية",
-      value: "2",
-      icon: ClipboardList,
-    },
-    {
-      title: "فرص تدريب متاحة",
-      value: "12",
-      icon: Compass,
-    },
+    { title: 'الساعات المنجزة', value: Number(training?.completedHours) || 0, icon: Clock3 },
+    { title: 'تدريبي الحالي', value: training && ['active','not_started'].includes(training.status) ? 1 : 0, icon: BriefcaseBusiness },
+    { title: 'طلباتي الحالية', value: myApplications.length, icon: ClipboardList },
+    { title: 'فرص تدريب متاحة', value: availableOpportunities.length, icon: Compass },
   ];
-
-  const opportunities = [
-    {
-      title: "تدريب في شركة التقنية الحديثة",
-      field: "تقنية المعلومات",
-      type: "حضوري",
-      icon: Code2,
-      iconBg: "#E5F8FC",
-      iconBorder: "#AAE7F2",
-      chipBg: "rgba(0, 180, 216, 0.15)",
-      chipDot: "#00B4D8",
-    },
-    {
-      title: "تدريب في مركز فلسطين للتطوير",
-      field: "التصميم الجرافيكي والفنون الرقمية",
-      type: "عن بعد",
-      icon: BarChart3,
-      iconBg: "#FFF5E5",
-      iconBorder: "#FCD89B",
-      chipBg: "rgba(245, 158, 11, 0.15)",
-      chipDot: "#F59E0B",
-    },
-    {
-      title: "تدريب في شركة حلول الشبكات",
-      field: "الاتصالات وإنترنت الأشياء",
-      type: "حضوري",
-      icon: Network,
-      iconBg: "#E9FBF5",
-      iconBorder: "#AFE9D6",
-      chipBg: "rgba(16, 185, 129, 0.15)",
-      chipDot: "#10B981",
-    },
-  ];
-
-  const notifications = [
-    {
-      title: "فتح باب التسجيل في دورات تدريبية جديدة",
-      date: "2025/10/01",
-      unread: true,
-    },
-    {
-      title: "إعلان عن فرص تدريب ميداني في عدة جهات",
-      date: "2025/09/28",
-      unread: true,
-    },
-    {
-      title: "تحديث سياسة التدريب الميداني",
-      date: "2025/09/25",
-      unread: false,
-    },
-  ];
+  const opportunities = availableOpportunities.slice(0,3).map((o,index) => ({
+    id: o.id, title: o.title, field: o.specialty || '—', type: o.mode || 'غير محدد',
+    icon: [Code2, BarChart3, Network][index % 3],
+    iconBg: ['#E5F8FC','#FFF5E5','#E9FBF5'][index % 3],
+    iconBorder: ['#AAE7F2','#FCD89B','#AFE9D6'][index % 3],
+    chipBg: ['rgba(0,180,216,0.15)','rgba(245,158,11,0.15)','rgba(16,185,129,0.15)'][index % 3],
+    chipDot: ['#00B4D8','#F59E0B','#10B981'][index % 3],
+  }));
+  // Notifications require a backend source; do not display invented dates or events.
+  const notifications = [];
 
   return (
     <div
@@ -731,11 +682,10 @@ export default function Dashboard() {
                         <button
                           type="button"
                           key={opportunity.title}
-                          onClick={() =>
-                            navigate(
-                              "/student/opportunities/details"
-                            )
-                          }
+                          onClick={() => {
+                            selectOpportunity(opportunity.id);
+                            navigate('/student/opportunities/details');
+                          }}
                           className={`
                             flex
                             min-h-[86px]

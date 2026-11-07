@@ -25,7 +25,7 @@ export default function Opportunities(){
  const close=(id)=>{setSelected(id);setModal('close')};
  const logout=()=>{setModal(null);navigate('/training-provider/login')};
  const closeOpportunity=()=>{if(setOpportunityStatus(selected,'closed'))setNotice('تم إغلاق باب التقديم على الفرصة');setModal(null)};
- const activate=(id)=>{setOpportunityStatus(id,'published');setNotice('تمت إعادة فتح باب التقديم')};
+ const activate=(id)=>{const ok=setOpportunityStatus(id,'published');setNotice(ok?'تمت إعادة فتح باب التقديم':'تعذر إعادة فتح الفرصة. تأكد من اعتماد الجهة وصلاحية الفرصة.');};
  const remove=()=>{if(deleteOpportunityDraft(selected))setNotice('تم حذف المسودة');setModal(null)};
  const unavailable=name=>setNotice(`صفحة «${name}» لم تُنفذ بعد.`);
 

@@ -1,4 +1,6 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
+import { getStudent } from "../admin/studentsStore";
+import { getActiveStudentId } from "../../services/studentTrainingEligibility";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -20,6 +22,7 @@ import Sidebar from "../../components/student/Sidebar";
 
 export default function Profile() {
   const navigate = useNavigate();
+  const currentStudent = getStudent(getActiveStudentId());
 
   const [isEditing, setIsEditing] =
     useState(false);
@@ -27,22 +30,22 @@ export default function Profile() {
   const [formData, setFormData] =
     useState({
       fullName:
-        "أمل أحمد صيام أبو زيد",
+        currentStudent?.name || "غير محدد",
 
       studentId:
-        "20231234",
+        getActiveStudentId(),
 
       college:
         "كلية الدراسات المتوسطة",
 
       major:
-        "تقنية المعلومات",
+        currentStudent?.major || "غير محدد",
 
       email:
-        "amal@example.com",
+        "",
 
       phone:
-        "0599123456",
+        "",
     });
 
   const [savedData, setSavedData] =

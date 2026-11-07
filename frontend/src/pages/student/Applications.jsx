@@ -1,8 +1,7 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
 import { useEffect, useMemo, useState } from "react";
-import { getApplications, subscribeApplications } from "../training-provider/providerApplicationsStore";
-import { getOpportunity } from "../training-provider/opportunitiesStore";
-import { getAcademicDecision, getAcademicDecisionRecord, getOverallApplicationStatus } from "../../services/trainingWorkflow";
+import { subscribeApplications } from "../training-provider/providerApplicationsStore";
+import { getMyApplications } from "./studentApplicationView";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -46,91 +45,31 @@ export default function Applications() {
      APPLICATIONS DATA
   ========================================================= */
 
-  const demoApplications = [
-    {
-      id: "TR-2025-045",
-      title: "تدريب في شركة القدس للاتصالات",
-      organization: "شركة القدس للاتصالات (Paltel)",
-      location: "غزة - الرمال الجنوبي",
-      submittedAt: "2025/09/10",
-      updatedAt: "2025/09/14",
-      hours: "120 ساعة",
-      status: "قيد الانتظار",
-      statusType: "waiting",
-      description:
-        "تمت مراجعة البيانات والمستندات، والطلب بانتظار المصادقة النهائية.",
-    },
-
-    {
-      id: "TR-2025-031",
-      title: "تدريب في شركة التقنية الحديثة",
-      organization: "شركة التقنية الحديثة",
-      location: "غزة - الرمال",
-      submittedAt: "2025/08/18",
-      updatedAt: "2025/08/25",
-      hours: "100 ساعة",
-      status: "مقبول",
-      statusType: "accepted",
-      description:
-        "تم اعتماد الطلب وقبول الطالب للبدء بإجراءات التدريب الميداني.",
-    },
-
-    {
-      id: "TR-2025-018",
-      title: "تدريب في مركز فلسطين للتطوير",
-      organization: "مركز فلسطين للتطوير",
-      location: "غزة",
-      submittedAt: "2025/07/12",
-      updatedAt: "2025/07/15",
-      hours: "90 ساعة",
-      status: "يحتاج تعديل",
-      statusType: "revision",
-      description:
-        "يرجى تحديث أحد المستندات المطلوبة لإكمال إجراءات مراجعة الطلب.",
-    },
-  ];
-
-  const [liveRequests, setLiveRequests] = useState(() => getApplications().filter(x => x.source === 'student'));
+  // Keep the displayed requests scoped to the active student; no cross-account demo fixtures.
+  const [liveRequests, setLiveRequests] = useState(getMyApplications);
   useEffect(() => {
-    const refresh = () => setLiveRequests(getApplications().filter(x => x.source === "student"));
+    const refresh = () => setLiveRequests(getMyApplications());
     const unsubscribe = subscribeApplications(refresh);
-    window.addEventListener("admin-training-requests-updated", refresh);
-    window.addEventListener("storage", refresh);
+    window.addEventListener('admin-training-requests-updated', refresh);
+    window.addEventListener('storage', refresh);
     return () => {
       unsubscribe();
-      window.removeEventListener("admin-training-requests-updated", refresh);
-      window.removeEventListener("storage", refresh);
+      window.removeEventListener('admin-training-requests-updated', refresh);
+      window.removeEventListener('storage', refresh);
     };
   }, []);
-  const liveApplications = liveRequests.map(row => {
-    const opportunity = getOpportunity(row.opportunityId);
-    const academicDecision = getAcademicDecision(row.id);
-    const academicRecord = getAcademicDecisionRecord(row.id);
-    const overall = getOverallApplicationStatus(row, academicDecision);
-    const type = overall === "accepted" ? "accepted" : overall === "rejected" ? "rejected" : "waiting";
-    const description = academicDecision === "rejected"
-      ? "رفضت الإدارة الطلب: " + (academicRecord?.rejectionReason || academicRecord?.note || "راجع جهة الإشراف الأكاديمي")
-      : row.status === "rejected"
-        ? row.rejectionReason || "رفضت جهة التدريب الطلب"
-        : overall === "accepted"
-          ? "اكتملت موافقة الإدارة وجهة التدريب، وأصبح سجل التدريب جاهزًا"
-          : academicDecision === "approved"
-            ? "اعتمدت الإدارة الطلب، وبانتظار قرار جهة التدريب"
-            : row.status === "accepted"
-              ? "وافقت جهة التدريب، وبانتظار اعتماد الإدارة"
-              : "الطلب بانتظار مراجعة الإدارة وجهة التدريب";
-    return {
-      id: row.id, title: opportunity?.title || "فرصة تدريب",
-      organization: row.organization || "جهة التدريب", location: opportunity?.location || "غزة",
-      submittedAt: row.date?.replaceAll("-", "/") || "",
-      updatedAt: (row.decidedAt || row.date || "").replaceAll("-", "/"),
-      hours: `${opportunity?.hours || 0} ساعة`,
-      status: overall === "accepted" ? "مقبول" : overall === "rejected" ? "مرفوض" : "قيد الانتظار",
-      statusType: type,
-      description,
-    };
-  });
-  const applications = [...liveApplications, ...demoApplications];
+  const applications = liveRequests.map(row => ({
+    id: row.id,
+    title: row.opportunityTitle,
+    organization: row.organizationName,
+    location: row.location,
+    submittedAt: String(row.date || '').replaceAll('-', '/'),
+    updatedAt: String(row.decidedAt || row.date || '').replaceAll('-', '/'),
+    hours: row.requiredHours ? `${row.requiredHours} ساعة` : 'غير محدد',
+    status: row.overallStatus === 'accepted' ? 'مقبول' : row.overallStatus === 'rejected' ? 'مرفوض' : 'قيد الانتظار',
+    statusType: row.overallStatus === 'accepted' ? 'accepted' : row.overallStatus === 'rejected' ? 'rejected' : 'waiting',
+    description: row.note,
+  }));
 
   /* =========================================================
      FILTER APPLICATIONS

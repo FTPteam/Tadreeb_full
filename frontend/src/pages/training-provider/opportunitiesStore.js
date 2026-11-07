@@ -71,7 +71,14 @@ export function setOpportunityStatus(id,status){
   if(!['closed','published','draft'].includes(status))return false;
   const items=getOpportunities();const found=items.find(x=>x.id===id);
   if(!found||String(found.organizationId ?? "1")!==String(getActiveProviderOrganizationId()))return false;
-  if(status==='published'&&!isActiveProviderApproved())return false;
+  if(status==='published'){
+    if(!isActiveProviderApproved())return false;
+    // A closed opportunity must not be reopened after the application deadline
+    // or the training's start date. The provider may create a new opportunity.
+    const today=new Date();
+    const localToday=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    if((found.deadline&&found.deadline<localToday)||(found.startDate&&found.startDate<=localToday))return false;
+  }
   if(status==='draft'&&found.status!=='draft')return false;
   commit(items.map(x=>x.id===id?{...x,status}:x));return true;
 }

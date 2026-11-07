@@ -22,77 +22,6 @@ import Sidebar from "../../components/admin/Sidebar";
 const STORAGE_KEY = "cis-training-organizations-v1";
 const PAGE_SIZE = 4;
 
-const DEMO_ORGANIZATIONS = [
-  {
-    id: 1,
-    name: "شركة القدس للاتصالات",
-    type: "تقنية معلومات",
-    location: "غزة - الرمال",
-    phone: "0599 000 111",
-    email: "training@qudscom.ps",
-    supervisor: "م. خالد عودة",
-    students: 42,
-    seats: 60,
-    availableSeats: 18,
-    status: "approved",
-    agreementExpiry: "2026/09/01",
-    rating: 4.4,
-    specializations: [
-      "تكنولوجيا علم البيانات",
-      "الاتصالات وإنترنت الأشياء",
-      "التصميم الجرافيكي والفنون الرقمية",
-    ],
-  },
-  {
-    id: 2,
-    name: "شركة الأمل للأنظمة الصناعية",
-    type: "صناعي",
-    location: "غزة - المنطقة الصناعية",
-    phone: "08 282 3000",
-    students: 14,
-    status: "approved",
-  },
-  {
-    id: 3,
-    name: "مركز الصيانة الفنية المتقدم",
-    type: "صيانة",
-    location: "خان يونس",
-    phone: "08 205 4400",
-    students: 25,
-    status: "renewal",
-    requestDate: "2025/12/02",
-  },
-  {
-    id: 4,
-    name: "استوديو بيكسل للتصميم",
-    type: "تصميم",
-    location: "غزة - الرمال",
-    phone: "08 288 9122",
-    students: 8,
-    status: "pending",
-    requestDate: "2025/11/28",
-  },
-  { id: 5, name: "شركة المشرق الرقمية", type: "تقنية معلومات", location: "غزة - النصر", students: 21, status: "approved", phone: "0598 440 220" },
-  { id: 6, name: "شركة الشرق للصناعات", type: "صناعي", location: "دير البلح", students: 11, status: "renewal" },
-  { id: 7, name: "مركز المستقبل للصيانة", type: "صيانة", location: "غزة", students: 18, status: "approved" },
-  { id: 8, name: "استوديو رؤية", type: "تصميم", location: "رفح", students: 6, status: "approved" },
-  { id: 9, name: "شركة الهيدروليك الحديثة", type: "صناعي", location: "غزة", students: 0, status: "pending", requestDate: "2025/11/20" },
-  { id: 10, name: "شركة التقنية الحديثة", type: "تقنية معلومات", location: "غزة", students: 0, status: "pending", requestDate: "2025/11/17" },
-  { id: 11, name: "مركز الأمل للتدريب", type: "صيانة", location: "خان يونس", students: 0, status: "pending", requestDate: "2025/11/12" },
-  { id: 12, name: "مؤسسة المستقبل", type: "تصميم", location: "غزة", students: 0, status: "pending", requestDate: "2025/11/08" },
-];
-
-const DEMO_STUDENTS = [
-  { id: 1, name: "أمل أحمد صيام", specialization: "البرمجيات وقواعد البيانات", status: "training" },
-  { id: 2, name: "محمود إبراهيم رضوان", specialization: "تكنولوجيا علم البيانات", status: "training" },
-  { id: 3, name: "سارة عبد الرحمن", specialization: "الاتصالات وإنترنت الأشياء", status: "waiting" },
-  { id: 4, name: "أنس كمال البيطار", specialization: "إلكترونيات صناعية وتحكم", status: "completed" },
-  { id: 5, name: "نور خليل", specialization: "البرمجيات وقواعد البيانات", status: "training" },
-  { id: 6, name: "بلال الشيخ", specialization: "تكنولوجيا علم البيانات", status: "training" },
-  { id: 7, name: "محمد العطار", specialization: "الاتصالات وإنترنت الأشياء", status: "waiting" },
-  { id: 8, name: "ياسمين محمود", specialization: "البرمجيات وقواعد البيانات", status: "completed" },
-];
-
 const STATUS_CONFIG = {
   approved: { label: "معتمدة", style: "bg-[#DCFCE7] text-[#15803D]" },
   pending: { label: "بانتظار الاعتماد", style: "bg-[#FFE5D9] text-[#B54708]" },
@@ -102,17 +31,19 @@ const STATUS_CONFIG = {
 };
 
 function loadOrganization(id, passed) {
-  const initial = DEMO_ORGANIZATIONS.find(item => String(item.id) === String(id));
   const shared = getSharedOrganization(id);
   if (!shared) return null;
-  const item = {...(initial || {}), ...((passed && String(passed.id)===String(id)) ? passed : {}), ...shared};
-  const activeStudents = Number(item.activeStudents ?? item.students ?? 0);
-  const seats = Number(item.seats ?? item.capacity ?? 0);
+  // Shared organization record is authoritative. Do not overlay outdated demo-only company details.
+  const item = {...((passed && String(passed.id) === String(id)) ? passed : {}), ...shared};
+  const activeStudents = getStudents().filter(student =>
+    student.organization === item.name && student.status === "قيد التدريب"
+  ).length;
+  const seats = Number(item.seats ?? item.capacity);
   return {
     ...item, id: item.id ?? id, name: item.name || "جهة تدريب",
     type:item.type || "—", location:item.location || "—", phone:item.phone || "—",
     email:item.email || "—", supervisor:item.supervisor || item.supervisorName || "—",
-    activeStudents, availableSeats:Number(item.availableSeats ?? Math.max(0,seats-activeStudents)),
+    activeStudents, availableSeats:Number.isFinite(seats) && seats >= 0 ? Math.max(0, seats - activeStudents) : "—",
     agreementExpiry:item.agreementExpiry || item.agreementEndDate || "—",
     renewalDate:item.renewalDate || (item.agreementExpiry ? String(item.agreementExpiry).slice(0,7) : "—"),
     specializations:Array.isArray(item.specializations) ? item.specializations : [],
@@ -218,7 +149,7 @@ export default function TrainingOrganizationDetails() {
       approvalStatus: approved ? "معتمدة" : "مرفوضة",
       reviewNote: note.trim(),
       decisionDate: new Date().toLocaleDateString("en-CA"),
-      decidedBy: "د. سامر يوسف",
+      decidedBy: null, // Authenticated reviewer will come from the backend.
     };
 
     if (!persistOrganization(updated)) {

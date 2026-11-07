@@ -169,7 +169,7 @@ export default function TrainingRequestDetails() {
       decisionDate: new Date()
         .toLocaleDateString("en-CA"),
 
-      decidedBy: "د. سامر يوسف",
+      decidedBy: null, // Authenticated reviewer will come from the backend.
     };
 
     setSaving(true);
@@ -512,7 +512,7 @@ export default function TrainingRequestDetails() {
                         label="المشرف"
                         value={
                           request.decidedBy ||
-                          "د. سامر يوسف"
+                          "بانتظار ربط هوية المشرف"
                         }
                       />
                     </div>

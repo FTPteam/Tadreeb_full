@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { clearActiveStudentId } from "../../services/studentTrainingEligibility";
 import { LayoutDashboard, Home, BriefcaseBusiness, Inbox, Users, CalendarCheck, Star, UserRoundCog, ChartNoAxesColumn, Bell, Building2, Settings, LogOut, X, ClipboardList, FileText, CalendarDays, CircleCheck, GraduationCap, FileCheck, BadgeCheck, Activity, UserRound } from "lucide-react";
 
 const menus = {
@@ -43,6 +44,7 @@ export default function PortalSidebar({ role = "student", open, onClose, onLogou
 
   const handleLogout = () => {
     close();
+    if (role === "student") clearActiveStudentId();
     if (onLogout) onLogout();
     else navigate(role === "provider" ? "/training-provider/login" : role === "admin" ? "/admin/login" : "/");
   };
@@ -50,7 +52,7 @@ export default function PortalSidebar({ role = "student", open, onClose, onLogou
 
   return <>
     <button type="button" aria-label="إغلاق القائمة" onClick={close} className={`fixed inset-0 z-40 bg-[#0F172A]/45 backdrop-blur-[1px] transition-opacity duration-300 lg:hidden ${isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`} />
-    <aside dir="rtl" aria-label={`قائمة ${role}`} className={`fixed right-0 top-0 z-50 flex h-screen w-[280px] shrink-0 flex-col overflow-hidden bg-[#09379A] font-['Cairo'] text-white transition-transform duration-300 ease-out ${isOpen ? "translate-x-0" : "translate-x-full"} lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:transition-none`}>
+    <aside dir="rtl" aria-label={`قائمة ${role}`} className={`fixed right-0 top-0 z-50 flex h-screen w-[280px] shrink-0 flex-col overflow-hidden bg-[#09379A] font-['Cairo'] text-white transition-transform duration-300 ease-out ${isOpen ? "translate-x-0" : "translate-x-full"} lg:order-first lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:transition-none`}>
       <div className="relative flex h-[112px] shrink-0 items-center px-[18px] pt-[26px] lg:h-[96px] lg:pt-0">
         <img src="/logo.svg" alt="شعار بوابة التدريب الميداني" className="h-[48px] w-[48px] shrink-0 object-contain" />
         <div className="mr-[10px] min-w-0 text-right"><h2 className="m-0 whitespace-nowrap text-[15px] font-bold leading-[20px] tracking-[1px]">بوابة التدريب الميداني</h2><p className="m-0 mt-[3px] whitespace-nowrap text-[11px] font-medium leading-[17px] text-white/90">كلية الدراسات المتوسطة - الأزهر</p></div>
