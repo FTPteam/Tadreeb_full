@@ -7,6 +7,8 @@ from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, serializers, viewsets
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -57,6 +59,7 @@ class CertificateViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, views
     """
 
     serializer_class = CertificateSerializer
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     def get_permissions(self):
         if self.action in ("create", "revoke"):
