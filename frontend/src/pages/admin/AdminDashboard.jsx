@@ -57,7 +57,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   // FR-36 / FR-38: live numbers from /api/stats/ (it answers by the user's role).
   const stats = useApi(fetchStats, []).data || {};
-  const byStatus = stats.applications?.by_status || {};
+  const byStatus = stats.applications?.by_status ?? stats.by_status ?? {};
   const user = getCurrentUser();
   const trainingStatuses = [
     { label: "قيد التدريب", value: byStatus.in_training || 0, color: "bg-[#09379A]" },
@@ -71,7 +71,9 @@ export default function AdminDashboard() {
     byStatus.submitted ? { title: `${byStatus.submitted} طلبات جديدة بانتظار المراجعة`, time: "الآن", icon: AlertTriangle, color: "orange", path: "/admin/training-requests" } : null,
   ].filter(Boolean);
   const pendingRequests = (byStatus.submitted || 0) + (byStatus.under_review || 0);
-  const reportsToGrade = Math.max(0, (stats.reports?.submitted || 0) - (stats.reports?.graded || 0));
+  const reportsToGrade =
+  stats.pending_tasks?.reports_to_grade ??
+  Math.max(0, (stats.reports?.submitted || 0) - (stats.reports?.graded || 0));
 
   return (
     <AdminPageLayout className="space-y-5">
@@ -89,7 +91,15 @@ export default function AdminDashboard() {
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <DashboardStat
           label="إجمالي الطلاب"
-          value={String(stats.students ?? 0)}
+         value={String(
+         typeof stats.total_students === "number"
+         ? stats.total_students
+         : typeof stats.students === "number"
+          ? stats.students
+         : Array.isArray(stats.students)
+        ? stats.students.length
+        : 0
+)}
           unit="طالب"
           icon={Users}
           color="blue"
