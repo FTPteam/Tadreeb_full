@@ -20,6 +20,7 @@ from analytics.views import (
     SupervisorStatsView,
 )
 from analytics.pdf_export import ApplicationsPdfExportView
+from analytics.performance_exports import FinalEvaluationsExportView
 from accounts.views import (
     DepartmentViewSet,
     LoginView,
@@ -105,7 +106,11 @@ urlpatterns = [
     path("api/stats/supervisor/", SupervisorStatsView.as_view()),
     path("api/stats/provider/", ProviderStatsView.as_view()),
     path("api/exports/applications/", ApplicationsExportView.as_view()),
-    path("api/exports/applications/pdf/", ApplicationsPdfExportView.as_view()),
+        path("api/exports/applications/pdf/", ApplicationsPdfExportView.as_view()),
+    path(
+        "api/exports/performance/final-evaluations/",
+        FinalEvaluationsExportView.as_view(),
+    ),
     path("api/", include(router.urls)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
