@@ -112,19 +112,35 @@ function printReport(report) {
   printWindow.document.close();
 }
 
+
 function downloadExcel(report) {
   const worksheet = XLSX.utils.aoa_to_sheet([
     ["بيانات التقرير"],
+    [],
     ...getReportRows(report),
     [],
     ["ملاحظة", "هذا ملف تعريفي تجريبي؛ بيانات التقرير التفصيلية غير مربوطة."],
   ]);
-  worksheet["!cols"] = [{ wch: 24 }, { wch: 55 }];
+
+  worksheet["!cols"] = [
+    { wch: 30 },
+    { wch: 65 },
+  ];
+
+  worksheet["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+  ];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "التقرير");
+
+  workbook.Workbook = {
+    Views: [{ RTL: true }],
+  };
+
   XLSX.writeFile(workbook, `${report.title}.xlsx`);
 }
+
 
 export default function PerformanceReports() {
   const navigate = useNavigate();
