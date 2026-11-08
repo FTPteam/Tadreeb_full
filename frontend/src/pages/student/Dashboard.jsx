@@ -2,6 +2,7 @@ import AcademicFooter from "../../components/shared/AcademicFooter";
 import { useNavigate } from "react-router-dom";
 import { selectOpportunity } from "./studentApplicationDraft";
 import { useApi } from "../../api/useApi";
+import { getCurrentUser } from "../../api/auth";
 import {
   fetchCurrentTraining,
   fetchMyApplications,
@@ -26,6 +27,9 @@ import Header from "../../components/student/Header";
 import Sidebar from "../../components/student/Sidebar";
 
 export default function Dashboard() {
+const user = getCurrentUser();
+const studentName = user?.full_name?.trim().split(/\s+/)[0] || user?.username || "طالب";
+
   const navigate = useNavigate();
 
   const currentYear = new Date().getFullYear();
@@ -159,7 +163,7 @@ export default function Dashboard() {
                     xl:text-[24px]
                   "
                 >
-                  مرحباً أمل
+                   مرحباً {studentName}
                 </h1>
 
                 <p
