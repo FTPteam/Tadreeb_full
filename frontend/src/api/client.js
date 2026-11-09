@@ -93,6 +93,8 @@ async function parse(response) {
 
 /** api("/applications/", {method: "POST", body: {...}}) → the JSON answer, or throws ApiError. */
 export async function api(path, options = {}) {
+  // A visitor who never logged in has no session to expire: no redirect for them.
+  const hadSession = Boolean(getTokens()?.access);
   let response;
   try {
     response = await send(path, options);
@@ -102,7 +104,7 @@ export async function api(path, options = {}) {
   } catch {
     throw new ApiError(0, null);
   }
-  if (response.status === 401 && options.auth !== false) sessionExpired();
+  if (response.status === 401 && options.auth !== false && hadSession) sessionExpired();
   const data = await parse(response);
   if (!response.ok) throw new ApiError(response.status, data);
   return data;
