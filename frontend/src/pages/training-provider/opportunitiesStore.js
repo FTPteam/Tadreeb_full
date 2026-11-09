@@ -1,23 +1,104 @@
 import { ACADEMIC_PROGRAMS, isDepartmentProgram } from "../../constants/academicPrograms.js";
 import { getActiveProviderOrganizationId, isActiveProviderApproved } from "../../services/providerOrganization.js";
 import { getOrganization } from "../admin/trainingOrganizationsStore.js";
-// Frontend-only demo data for the training provider; replace with an authenticated API later.
-const KEY = 'cis-provider-opportunities-v1';
-const EVENT = 'cis-provider-opportunities-updated';
-const seed = [
- {id:'opp-1',organizationId:'1',title:'تدريب التصميم والمونتاج',specialty:'التصميم والمونتاج',mode:'حضوري',hours:100,capacity:4,applications:0,deadline:'',startDate:'2025-12-01',endDate:'2026-02-01',supervisor:'خالد عودة',description:'فرصة تدريب في أعمال التصميم والمونتاج.',requirements:['الالتزام بساعات الدوام'],skills:['التصميم'],status:'draft',createdAt:'2025-10-20T12:00:00',applicants:[]},
- {id:'opp-2',organizationId:'1',title:'تدريب الدعم الفني',specialty:'الدعم الفني',mode:'حضوري',hours:80,capacity:3,applications:4,deadline:'2025-10-30',startDate:'2025-11-01',endDate:'2026-01-01',supervisor:'خالد عودة',description:'المساعدة في تقديم خدمات الدعم الفني.',requirements:['أساسيات الحاسوب'],skills:['حل المشكلات'],status:'closed',createdAt:'2025-10-21T12:00:00',applicants:[]},
- {id:'opp-3',organizationId:'1',title:'تدريب تحليل البيانات',specialty:'تكنولوجيا علم البيانات',mode:'حضوري',hours:120,capacity:4,applications:5,deadline:'2025-11-15',startDate:'2025-12-01',endDate:'2026-02-01',supervisor:'خالد عودة',description:'تدريب عملي على تحليل البيانات وإعداد التقارير.',requirements:['المعرفة الأساسية بالجداول'],skills:['تحليل البيانات'],status:'published',createdAt:'2025-10-22T12:00:00',applicants:[]},
- {id:'opp-4',organizationId:'1',title:'تدريب شبكات الاتصالات',specialty:'الاتصالات وإنترنت الأشياء',mode:'حضوري',hours:100,capacity:5,applications:6,deadline:'2025-11-25',startDate:'2025-12-01',endDate:'2026-02-01',supervisor:'خالد عودة',description:'التدريب على صيانة شبكات الاتصالات وتشغيلها.',requirements:['مبادئ الشبكات'],skills:['الاتصالات'],status:'published',createdAt:'2025-10-23T12:00:00',applicants:[]},
- {id:'opp-5',organizationId:'1',title:'تدريب تطوير الويب',specialty:'البرمجيات وقواعد البيانات',mode:'حضوري',hours:120,capacity:8,applications:9,deadline:'2025-11-20',startDate:'2025-12-01',endDate:'2026-02-01',supervisor:'خالد عودة',description:'تدريب عملي على تطوير تطبيقات الويب ضمن فريق برمجي تحت إشراف مهندس متخصص، ويشمل تصميم الواجهات وربطها بقواعد البيانات.',requirements:['أن يكون الطالب مسجلاً في الفصل الحالي','اجتياز مساقات البرمجة الأساسية','الالتزام بساعات الدوام المحددة'],skills:['HTML / CSS','JavaScript','قواعد البيانات','العمل الجماعي'],status:'published',createdAt:'2025-10-24T12:00:00',applicants:[{id:'1',name:'أمل أحمد صيام',studentId:'20231234',applicationId:'APP-0400',status:'accepted'},{id:'2',name:'كرم محمد النجار',studentId:'20231240',applicationId:'APP-0399',status:'accepted'},{id:'3',name:'دعاء ياسر أبو عودة',studentId:'20231252',applicationId:'APP-0398',status:'accepted'},{id:'4',name:'عمر خليل الحداد',studentId:'20231267',applicationId:'APP-0397',status:'accepted'},{id:'5',name:'ريم سعيد الكرد',studentId:'20231281',applicationId:'APP-0396',status:'accepted'},{id:'6',name:'هبة سامي القدرة',studentId:'20231301',applicationId:'APP-0412',status:'pending'},{id:'7',name:'نادين عصام اللوح',studentId:'20231302',applicationId:'APP-0414',status:'pending'},{id:'8',name:'ضياء محمد الغلبيني',studentId:'20231303',applicationId:'APP-0415',status:'pending'},{id:'9',name:'شهد خالد الأسطل',studentId:'20231304',applicationId:'APP-0421',status:'rejected'}]}
-];
-export const statusLabel={draft:'مسودة',published:'منشورة',closed:'مغلقة'};
+import { api, apiList } from "../../api/client.js";
+
+const KEY = "cis-provider-opportunities-v1";
+const EVENT = "cis-provider-opportunities-updated";
+
+export const statusLabel = { draft: "مسودة", published: "منشورة", closed: "مغلقة" };
 export const specialties = ACADEMIC_PROGRAMS;
-const browser=()=>typeof window!=='undefined';
-export function getOpportunities(){if(!browser())return seed.map(x=>({...x}));try{const value=localStorage.getItem(KEY);if(!value)return seed.map(x=>({...x}));const rows=JSON.parse(value);return Array.isArray(rows)?rows:seed.map(x=>({...x}));}catch{return seed.map(x=>({...x}));}}
-function commit(items){if(!browser())return;localStorage.setItem(KEY,JSON.stringify(items));window.dispatchEvent(new Event(EVENT));}
-export function subscribeOpportunities(cb){if(!browser())return()=>{};const onStorage=e=>{if(e.key===KEY)cb();};window.addEventListener(EVENT,cb);window.addEventListener('storage',onStorage);return()=>{window.removeEventListener(EVENT,cb);window.removeEventListener('storage',onStorage);};}
-export function getOpportunity(id){return getOpportunities().find(x=>x.id===id)||null;}
+
+let cachedOpportunities = [];
+let hasFetched = false;
+let isFetching = false;
+
+function specNameToId(name) {
+  const map = {
+    "هندسة برمجيات": 1,
+    "البرمجيات وقواعد البيانات": 1,
+    "برمجة": 2,
+    "تطوير الويب": 2,
+    "شبكات": 3,
+    "الاتصالات وإنترنت الأشياء": 3,
+    "الدعم الفني": 3,
+    "تكنولوجيا علم البيانات": 1,
+    "محاسبة": 4,
+    "إدارة أعمال": 5,
+  };
+  return map[name] || 1;
+}
+
+export function toStoreOpportunity(o) {
+  return {
+    id: String(o.id),
+    numericId: o.id,
+    organizationId: String(o.provider || "1"),
+    title: o.title,
+    specialty: o.specialization_name || "البرمجيات وقواعد البيانات",
+    specializationId: o.specialization,
+    mode: "حضوري",
+    hours: 120,
+    capacity: Number(o.seats) || 3,
+    freeSeats: o.free_seats,
+    applications: 0,
+    deadline: o.end_date || "",
+    startDate: o.start_date || "",
+    endDate: o.end_date || "",
+    supervisor: o.provider_name || "م. خالد عودة",
+    description: o.description || o.tasks || "",
+    requirements: typeof o.requirements === "string" ? o.requirements.split(/\r?\n/).filter(Boolean) : (o.requirements || []),
+    skills: ["العمل الجماعي", "الالتزام"],
+    status: o.status === "open" ? "published" : "closed",
+    createdAt: o.created_at || new Date().toISOString(),
+    applicants: [],
+  };
+}
+
+export async function refreshOpportunities() {
+  if (isFetching) return cachedOpportunities;
+  isFetching = true;
+  try {
+    const list = await apiList("/opportunities/");
+    cachedOpportunities = (list || []).map(toStoreOpportunity);
+    hasFetched = true;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event(EVENT));
+    }
+  } catch {
+    // Keep cached
+  } finally {
+    isFetching = false;
+  }
+  return cachedOpportunities;
+}
+
+if (typeof window !== "undefined") {
+  refreshOpportunities();
+}
+
+const browser = () => typeof window !== "undefined";
+
+export function getOpportunities() {
+  if (!hasFetched && !isFetching) {
+    refreshOpportunities();
+  }
+  return cachedOpportunities;
+}
+
+export function subscribeOpportunities(cb) {
+  if (!browser()) return () => {};
+  window.addEventListener(EVENT, cb);
+  return () => {
+    window.removeEventListener(EVENT, cb);
+  };
+}
+
+export function getOpportunity(id) {
+  const targetId = String(id ?? "").trim();
+  return getOpportunities().find((x) => String(x.id) === targetId) || null;
+}
+
 function withOrganizationDetails(item) {
   if (!item) return null;
   const organization = getOrganization(item.organizationId ?? "1");
@@ -31,61 +112,118 @@ function withOrganizationDetails(item) {
     organizationType: organization?.type || "",
   };
 }
-export function getStudentVisibleOpportunities(){
+
+export function getStudentVisibleOpportunities() {
   return getOpportunities()
-    .filter(item =>
-      item.status === "published" &&
-      getOrganization(item.organizationId ?? "1")?.status === "approved"
-    )
+    .filter((item) => item.status === "published")
     .map(withOrganizationDetails);
 }
-export function getStudentVisibleOpportunity(id){
-  const item=getOpportunity(id);
-  return item && item.status === "published" &&
-    getOrganization(item.organizationId ?? "1")?.status === "approved"
-    ? withOrganizationDetails(item) : null;
+
+export function getStudentVisibleOpportunity(id) {
+  const item = getOpportunity(id);
+  return item && item.status === "published" ? withOrganizationDetails(item) : null;
 }
-export function getProviderOpportunity(id){
-  const item=getOpportunity(id);
-  return item && String(item.organizationId ?? "1") === String(getActiveProviderOrganizationId()) ? item : null;
+
+export function getProviderOpportunity(id) {
+  const item = getOpportunity(id);
+  return item || null;
 }
-export function getCurrentProviderOpportunities(){
-  const organizationId=String(getActiveProviderOrganizationId());
-  return getOpportunities().filter(item=>String(item.organizationId ?? "1")===organizationId);
+
+export function getCurrentProviderOpportunities() {
+  return getOpportunities();
 }
-export function saveOpportunity(data,{publish=false}={}){
-  if(data.specialty&&!isDepartmentProgram(data.specialty))throw new Error('يرجى اختيار تخصص من قسم الهندسة وتكنولوجيا المعلومات.');
-  const approved=isActiveProviderApproved();
-  if(publish&&!approved)throw new Error('لا يمكن نشر الفرص قبل اعتماد جهة التدريب من الإدارة.');
-  const items=getOpportunities();
-  const id=data.id||`opp-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
-  const prior=items.find(x=>x.id===id);
-  const organizationId=String(prior?.organizationId ?? getActiveProviderOrganizationId());
-  if(prior&&organizationId!==String(getActiveProviderOrganizationId()))throw new Error('لا تملك هذه الجهة صلاحية تعديل هذه الفرصة.');
-  const status=publish?'published':(!approved&&prior?.status==='published'?'closed':prior?.status==='published'?'published':data.status||'draft');
-  const next={...prior,...data,id,organizationId,status,applications:prior?.applications||0,applicants:prior?.applicants||[],createdAt:prior?.createdAt||new Date().toISOString()};
-  commit(prior?items.map(x=>x.id===id?next:x):[next,...items]);
-  return id;
-}
-export function setOpportunityStatus(id,status){
-  if(!['closed','published','draft'].includes(status))return false;
-  const items=getOpportunities();const found=items.find(x=>x.id===id);
-  if(!found||String(found.organizationId ?? "1")!==String(getActiveProviderOrganizationId()))return false;
-  if(status==='published'){
-    if(!isActiveProviderApproved())return false;
-    // A closed opportunity must not be reopened after the application deadline
-    // or the training's start date. The provider may create a new opportunity.
-    const today=new Date();
-    const localToday=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-    if((found.deadline&&found.deadline<localToday)||(found.startDate&&found.startDate<=localToday))return false;
+
+export async function saveOpportunity(data, { publish = false } = {}) {
+  const specId = data.specializationId || specNameToId(data.specialty);
+  const status = publish ? "open" : (data.status === "published" ? "open" : "closed");
+
+  const body = {
+    title: data.title || "فرصة تدريب",
+    specialization: specId,
+    description: data.description || data.tasks || "تدريب عملي",
+    tasks: data.tasks || data.description || "أداء مهام التدريب",
+    requirements: Array.isArray(data.requirements) ? data.requirements.join("\n") : (data.requirements || "الالتزام بساعات الدوام"),
+    seats: Number(data.capacity || data.seats || 3),
+    start_date: data.startDate || "2026-03-01",
+    end_date: data.endDate || "2026-05-30",
+    location: data.location || "غزة",
+    status,
+  };
+
+  let resultId = data.id;
+  const isExisting = data.id && !String(data.id).startsWith("opp-");
+
+  if (isExisting) {
+    await api(`/opportunities/${data.id}/`, {
+      method: "PATCH",
+      body,
+    });
+  } else {
+    const created = await api("/opportunities/", {
+      method: "POST",
+      body,
+    });
+    resultId = String(created.id);
   }
-  if(status==='draft'&&found.status!=='draft')return false;
-  commit(items.map(x=>x.id===id?{...x,status}:x));return true;
+
+  await refreshOpportunities();
+  return resultId;
 }
-export function deleteOpportunityDraft(id){
-  const items=getOpportunities();const item=items.find(x=>x.id===id);
-  if(!item||String(item.organizationId ?? "1")!==String(getActiveProviderOrganizationId())||item.status!=='draft')return false;
-  commit(items.filter(x=>x.id!==id));return true;
+
+export async function setOpportunityStatus(id, status) {
+  const isExisting = id && !String(id).startsWith("opp-");
+  if (isExisting) {
+    const backendStatus = status === "published" ? "open" : "closed";
+    await api(`/opportunities/${id}/`, {
+      method: "PATCH",
+      body: { status: backendStatus },
+    }).catch(() => {});
+  }
+  await refreshOpportunities();
+  return true;
 }
-export function resetDemoOpportunities(){if(!browser())return;localStorage.removeItem(KEY);window.dispatchEvent(new Event(EVENT));}
-export function exportOpportunityCSV(items){const rows=[['الفرصة','التخصص','النمط','المدة بالساعات','المقاعد','الطلبات','آخر موعد','الحالة'],...items.map(o=>[o.title,o.specialty,o.mode,o.hours,o.capacity,o.applications,o.deadline,statusLabel[o.status]])];const escape=v=>`"${String(v??'').replace(/^[\s]*[=+@\-]/,m=>"'"+m).replace(/"/g,'""')} "`.trimEnd();const csv='\uFEFF'+rows.map(r=>r.map(escape).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download='training-opportunities.csv';document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);}
+
+export async function deleteOpportunityDraft(id) {
+  const isExisting = id && !String(id).startsWith("opp-");
+  if (isExisting) {
+    await api(`/opportunities/${id}/`, {
+      method: "DELETE",
+    }).catch(() => {});
+  }
+  await refreshOpportunities();
+  return true;
+}
+
+export function resetDemoOpportunities() {
+  refreshOpportunities();
+}
+
+export function exportOpportunityCSV(items) {
+  const rows = [
+    ["الفرصة", "التخصص", "النمط", "المدة بالساعات", "المقاعد", "الطلبات", "آخر موعد", "الحالة"],
+    ...items.map((o) => [
+      o.title,
+      o.specialty,
+      o.mode,
+      o.hours,
+      o.capacity,
+      o.applications,
+      o.deadline,
+      statusLabel[o.status] || o.status,
+    ]),
+  ];
+  const escape = (v) =>
+    `"${String(v ?? "")
+      .replace(/^[\s]*[=+@\-]/, (m) => "'" + m)
+      .replace(/"/g, '""')} "`.trimEnd();
+  const csv = "\uFEFF" + rows.map((r) => r.map(escape).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "training-opportunities.csv";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}

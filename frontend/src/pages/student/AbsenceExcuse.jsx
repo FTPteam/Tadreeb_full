@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 
 import Header from "../../components/student/Header";
+import { api } from "../../api/client";
+import { fetchMyApplication } from "../../api/student";
 import Sidebar from "../../components/student/Sidebar";
 
 const ATTENDANCE_KEY = "studentAttendanceRecords";
@@ -317,7 +319,7 @@ export default function AbsenceExcuse() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!validateForm()) return;
@@ -346,6 +348,18 @@ export default function AbsenceExcuse() {
     };
 
     try {
+      const myApp = await fetchMyApplication().catch(() => null);
+      if (myApp?.id) {
+        await api("/exception-requests/", {
+          method: "POST",
+          body: {
+            application: Number(myApp.id),
+            kind: "issue",
+            reason: `طلب عذر غياب (${formData.excuseType}) لتاريخ ${formData.date}: ${formData.reason.trim()}`,
+          },
+        }).catch((e) => console.warn("Could not post exception request:", e));
+      }
+
       const updatedExcuses = [
         ...currentExcuses,
         newExcuse,

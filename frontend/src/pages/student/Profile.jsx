@@ -1,7 +1,8 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
 import { getStudent } from "../admin/studentsStore";
 import { getActiveStudentId } from "../../services/studentTrainingEligibility";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { fetchProfile, updateProfile } from "../../api/student";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -50,6 +51,25 @@ export default function Profile() {
 
   const [savedData, setSavedData] =
     useState(formData);
+  const [saveError, setSaveError] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState("");
+
+  useEffect(() => {
+    fetchProfile()
+      .then((data) => {
+        const mapped = {
+          fullName: data.full_name || data.university_id || "طالب",
+          studentId: String(data.university_id || ""),
+          college: "كلية الدراسات المتوسطة",
+          major: data.specialization_name || "—",
+          email: data.email || "",
+          phone: data.phone || "",
+        };
+        setFormData(mapped);
+        setSavedData(mapped);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleChange = (
     event
@@ -77,19 +97,17 @@ export default function Profile() {
     setIsEditing(false);
   };
 
-  const handleSave = () => {
-    setSavedData(formData);
-    setIsEditing(false);
-
-    console.log(
-      "Saved profile data:",
-      {
-        email:
-          formData.email,
-        phone:
-          formData.phone,
-      }
-    );
+  const handleSave = async () => {
+    try {
+      setSaveError("");
+      setSaveSuccess("");
+      await updateProfile({ email: formData.email, phone: formData.phone });
+      setSavedData(formData);
+      setIsEditing(false);
+      setSaveSuccess("تم حفظ التعديلات بنجاح.");
+    } catch (err) {
+      setSaveError(err?.message || "تعذر حفظ البيانات.");
+    }
   };
 
   return (

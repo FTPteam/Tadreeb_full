@@ -62,7 +62,7 @@ export default function CompleteTraining() {
   const ready = canCompleteTraining(student);
   const completed = student?.status === "completed";
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     const latest = getTrainingStudent(studentId);
 
     if (!canCompleteTraining(latest)) {
@@ -77,15 +77,11 @@ export default function CompleteTraining() {
       ...latest,
       status: "completed",
       completedAt: new Date().toLocaleDateString("en-CA"),
-      completedBy: null, // Authenticated reviewer will come from the backend.
+      completedBy: null,
     };
 
     try {
-      saveTrainingStudent(updated);
-      const registryStudent = getStudent(updated.id);
-      if (registryStudent) {
-        saveStudent({ ...registryStudent, status: "منتهٍ" });
-      }
+      await saveTrainingStudent(updated);
       setStudent(updated);
       setConfirmOpen(false);
 
@@ -95,9 +91,9 @@ export default function CompleteTraining() {
           successMessage: "تم إنهاء التدريب بنجاح.",
         },
       });
-    } catch {
+    } catch (err) {
       setConfirmOpen(false);
-      setError("تعذر حفظ إنهاء التدريب. حاول مرة أخرى.");
+      setError(err?.message || "تعذر حفظ إنهاء التدريب. حاول مرة أخرى.");
     }
   };
 

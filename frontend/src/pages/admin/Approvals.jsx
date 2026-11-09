@@ -4,7 +4,7 @@ import { BadgeCheck, CheckCircle2, Clock3, XCircle, Search, ChevronLeft, Clipboa
 import Header from "../../components/admin/Header";
 import Sidebar from "../../components/admin/Sidebar";
 import AcademicFooter from "../../components/shared/AcademicFooter";
-import { getRequests, REQUESTS_STORAGE_KEY } from "./trainingRequestsStore";
+import { getRequests, refreshTrainingRequests, REQUESTS_STORAGE_KEY } from "./trainingRequestsStore";
 import { getApplications as getProviderApplications } from "../training-provider/providerApplicationsStore";
 
 const labels = { pending: "بانتظار القرار", approved: "مقبول من الإدارة", rejected: "مرفوض من الإدارة" };
@@ -17,6 +17,7 @@ export default function Approvals() {
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
+    if (typeof refreshTrainingRequests === "function") refreshTrainingRequests();
     const refresh = () => setRequests(getRequests());
     const onStorage = (event) => {
       if (!event.key || event.key === REQUESTS_STORAGE_KEY || event.key === "cis-provider-applications-v1") refresh();

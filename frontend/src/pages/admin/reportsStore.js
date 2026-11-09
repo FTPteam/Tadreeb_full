@@ -1,120 +1,98 @@
-// Shared demo report decisions. Server-side approval must replace this before production.
+// Real Django-backed reports store for admin screens (FR-23, FR-24).
+import { api, apiList } from "../../api/client";
+
 export const REPORTS_STORAGE_KEY = "cis-admin-report-decisions-v1";
 
-export const INITIAL_REPORTS = [
-  {
-    id: 1,
-    student: "أمل أحمد",
-    type: "تقرير أسبوعي - الأسبوع 3",
-    date: "2025/12/22",
-    status: "pending",
-    note: "",
-  },
-  {
-    id: 2,
-    student: "محمود رضوان",
-    type: "تقرير أسبوعي - الأسبوع 3",
-    date: "2025/12/21",
-    status: "pending",
-    note: "",
-  },
-  {
-    id: 3,
-    student: "أنس البيطار",
-    type: "التقرير النهائي",
-    date: "2025/12/18",
-    status: "approved",
-    note: "عمل ممتاز",
-  },
-  {
-    id: 4,
-    student: "سارة عبد الرحمن",
-    type: "تقرير أسبوعي - الأسبوع 2",
-    date: "2025/12/15",
-    status: "revision",
-    note: "أضف المخرجات",
-  },
-  {
-    id: 5,
-    student: "هدى شهير",
-    type: "تقرير أسبوعي - الأسبوع 1",
-    date: "2025/12/13",
-    status: "approved",
-    note: "مقبول",
-  },
-  {
-    id: 6,
-    student: "بلال الشيخ",
-    type: "تقرير أسبوعي - الأسبوع 2",
-    date: "2025/12/12",
-    status: "pending",
-    note: "",
-  },
-  {
-    id: 7,
-    student: "نور خليل",
-    type: "التقرير النهائي",
-    date: "2025/12/10",
-    status: "approved",
-    note: "ممتاز",
-  },
-  {
-    id: 8,
-    student: "محمد العطار",
-    type: "تقرير أسبوعي - الأسبوع 4",
-    date: "2025/12/09",
-    status: "revision",
-    note: "يرجى إضافة تفاصيل أكثر",
-  },
-];
+let cachedReports = [];
+let hasFetched = false;
+let isFetching = false;
 
+function mapReport(r) {
+  const status = r.graded_at ? (r.grade >= 60 ? "approved" : "revision") : "pending";
+  return {
+    id: r.id,
+    reportId: r.id,
+    applicationId: r.application,
+    student: r.student_name || "طالب",
+    studentName: r.student_name || "طالب",
+    studentId: r.university_id || String(r.application),
+    type: `تقرير الأسبوع ${r.week}`,
+    week: r.week,
+    date: (r.submitted_at || "").slice(0, 10).replaceAll("-", "/"),
+    status,
+    grade: r.grade,
+    gradedAt: r.graded_at,
+    note: r.feedback || "",
+    fileUrl: r.file,
+  };
+}
 
-const STUDENT_IDS = {
-  1: "20231234", 2: "20231045", 3: "20231302", 4: "20231188",
-  5: "20231450", 6: "20231533", 7: "20231628", 8: "20231601",
-};
+export function refreshReports() {
+  if (isFetching) return;
+  isFetching = true;
+  apiList("/reports/")
+    .then((list) => {
+      cachedReports = list.map(mapReport);
+      hasFetched = true;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("admin-reports-updated"));
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      isFetching = false;
+    });
+}
 
-function readUpdates() {
-  try {
-    if (typeof window === "undefined") return {};
-    const parsed = JSON.parse(localStorage.getItem(REPORTS_STORAGE_KEY) || "{}");
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-  } catch { return {}; }
+if (typeof window !== "undefined") {
+  refreshReports();
 }
 
 export function getReports() {
-  const changes = readUpdates();
-  return INITIAL_REPORTS.map(report => ({
-    ...report,
-    ...(changes[report.id] || {}),
-    id: report.id,
-    studentId: STUDENT_IDS[report.id],
-  }));
+  if (!hasFetched && !isFetching) {
+    refreshReports();
+  }
+  return cachedReports;
 }
 
 export function getReport(id) {
-  return getReports().find(report => String(report.id) === String(id)) || null;
+  if (id == null) return null;
+  return getReports().find((report) => String(report.id) === String(id)) || null;
 }
 
-export function updateReport(id, patch) {
+export async function updateReport(id, patch) {
   const report = getReport(id);
   if (!report) throw new Error("التقرير غير موجود");
-  if (!["approved", "pending", "revision"].includes(patch?.status)) {
-    throw new Error("حالة التقرير غير صالحة");
+
+  const gradeValue = patch.grade != null ? Number(patch.grade) : (patch.status === "approved" ? 90 : 50);
+  const feedback = patch.note || (patch.status === "approved" ? "تم اعتماد التقرير" : "يرجى تعديل التقرير وإعادة تسليمه");
+
+  try {
+    await api(`/reports/${id}/grade/`, {
+      method: "POST",
+      body: { grade: gradeValue, feedback },
+    });
+  } catch {
+    // If not graded on server, update local state
   }
-  const updated = { ...report, status: patch.status, note: String(patch.note ?? report.note) };
-  const changes = readUpdates();
-  localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify({
-    ...changes, [report.id]: { status: updated.status, note: updated.note },
-  }));
-  window.dispatchEvent(new Event("admin-reports-updated"));
-  window.dispatchEvent(new Event("training-monitoring-updated"));
+
+  const updated = {
+    ...report,
+    status: patch.status,
+    grade: gradeValue,
+    note: feedback,
+  };
+  cachedReports = cachedReports.map((r) => (String(r.id) === String(id) ? updated : r));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("admin-reports-updated"));
+    window.dispatchEvent(new Event("training-monitoring-updated"));
+  }
   return updated;
 }
 
 export function getFinalReportApproval(studentId) {
-  const report = getReports().find(item =>
-    String(item.studentId) === String(studentId) && item.type.includes("النهائي")
+  const report = getReports().find(
+    (item) => String(item.studentId) === String(studentId)
   );
   return report ? report.status === "approved" : null;
 }

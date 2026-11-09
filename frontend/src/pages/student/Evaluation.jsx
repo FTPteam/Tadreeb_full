@@ -1,5 +1,7 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { api, apiList } from "../../api/client";
+import { fetchCurrentTraining } from "../../api/student";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -32,18 +34,51 @@ export default function Evaluation() {
   const [notes, setNotes] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-
-  const maxNotesLength = 900;
-
-  const trainerEvaluation = {
+  const [submitError, setSubmitError] = useState("");
+  const [currentTraining, setCurrentTraining] = useState(null);
+  const [trainerEvaluation, setTrainerEvaluation] = useState({
     score: 4,
     max: 5,
     percentage: 80,
-    supervisor: "م. سارة خليل",
-    organization: "شركة القدس للاتصالات",
-    note:
-      "أظهر الطالب التزاما جيدا واهتماما بالتعلم، ويحتاج إلى المزيد من التدريب العملي في إدارة السيرفرات الميدانية.",
-  };
+    supervisor: "مشرف التدريب الميداني",
+    organization: "جهة التدريب",
+    note: "بانتظار اعتماد التقييم من جهة التدريب.",
+  });
+
+  const maxNotesLength = 900;
+
+  useEffect(() => {
+    fetchCurrentTraining().then((tr) => {
+      if (tr) {
+        setCurrentTraining(tr);
+        // Fetch evaluations
+        apiList("/evaluations/").then((evals) => {
+          const pEval = evals.find(e => e.kind === "provider" && (!tr.applicationId || e.application === tr.applicationId));
+          if (pEval) {
+            const vals = Object.values(pEval.scores || {}).map(Number).filter(Number.isFinite);
+            const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 4;
+            setTrainerEvaluation({
+              score: Math.round(avg * 10) / 10,
+              max: 5,
+              percentage: Math.round(avg * 20),
+              supervisor: pEval.evaluator_name || "مشرف التدريب",
+              organization: tr.organization || "جهة التدريب",
+              note: pEval.notes || "تم رصد التقييم بنجاح.",
+            });
+          }
+        }).catch(() => {});
+
+        // Fetch my rating for this provider
+        apiList("/provider-ratings/").then((ratingsList) => {
+          if (Array.isArray(ratingsList) && ratingsList.length > 0) {
+            const myRating = ratingsList[0];
+            setIsSubmitted(true);
+            if (myRating.comment) setNotes(myRating.comment);
+          }
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+  }, []);
 
   const evaluationItems = [
     {
@@ -107,16 +142,24 @@ export default function Evaluation() {
     setNotes("");
   };
 
-  const handleConfirmSubmit = () => {
-    setIsSubmitted(true);
-    setShowConfirmModal(false);
-
-    console.log({
-      ratings,
-      notes,
-      average: studentAverage,
-      status: "submitted",
-    });
+  const handleConfirmSubmit = async () => {
+    setSubmitError("");
+    try {
+      if (currentTraining?.applicationId) {
+        await api("/provider-ratings/", {
+          method: "POST",
+          body: {
+            application: Number(currentTraining.applicationId),
+            rating: Math.max(1, Math.min(5, Math.round(Number(studentAverage)))),
+            comment: notes.trim() || "تقييم المتدرب لجهة التدريب",
+          },
+        });
+      }
+      setIsSubmitted(true);
+      setShowConfirmModal(false);
+    } catch (err) {
+      setSubmitError(err?.message || "تعذر حفظ التقييم. حاول مرة أخرى.");
+    }
   };
 
   return (

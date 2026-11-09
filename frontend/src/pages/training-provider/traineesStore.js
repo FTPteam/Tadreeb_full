@@ -1,6 +1,7 @@
 import { getOpportunity } from './opportunitiesStore.js';
 import { getActiveProviderOrganizationId } from '../../services/providerOrganization.js';
 import { findOtherActivePlacement } from '../../services/trainingLifecycle.js';
+import { api } from '../../api/client.js';
 const KEY='cis-provider-trainees-v1', EVENT='cis-provider-trainees-updated';
 const names=['أمل أحمد صيام','إسلام جمال القصاص','آية رامي بدير','بسمة إياد النجار','تالا ماهر الجدية','جنى وليد الشاعر','دعاء ياسر أبو عودة','رغد عماد أبو سليم','زياد أسامة حمد','سارة عبد الرحمن','ليلى حسن أبو شمالة','لينا محمود شعث','محمد إبراهيم رضوان','محمود إبراهيم رضوان','مصطفى هاني العرجا','يوسف نبيل عوض','كرم محمد النجار','عمر خليل الحداد','ريم سعيد الكرد','إسلام عادل حسن','رنا علي عمر','أحمد مصطفى'];
 const supervisors=['خالد عودة','رنا الحلو','أحمد شحادة'];
@@ -38,7 +39,7 @@ export function reviewLog(id,logId,decision,note=''){
  if(decision==='revision'&&!note.trim())return {ok:false,message:'ملاحظة المراجعة مطلوبة عند طلب التعديل'};
  return updateTrainee(id,{logs:t.logs.map(l=>l.id===logId?{...l,status:decision,reviewNote:note.trim(),reviewedAt:new Date().toISOString()}:l)});
 }
-export function saveEvaluation(id,scores,note){
+export async function saveEvaluation(id,scores,note){
  const t=getTrainee(id);
  if(!t)return {ok:false,message:'المتدرب غير موجود'};
  if(t.status==='not_started')return {ok:false,message:'لا يمكن تقييم متدرب لم يبدأ التدريب بعد'};
@@ -46,6 +47,29 @@ export function saveEvaluation(id,scores,note){
  if(!Array.isArray(scores)||scores.length!==5||scores.some(v=>!Number.isInteger(v)||v<1||v>5))return {ok:false,message:'يرجى تقييم جميع البنود من 1 إلى 5'};
  // Display the assigned supervisor, not a hard-coded person. Only the backend can
  // verify who actually submitted the evaluation.
+ try {
+  const appId = t.applicationId || (id && !String(id).startsWith("trainee-") ? id : null);
+  if (appId) {
+    await api("/evaluations/", {
+      method: "POST",
+      body: {
+        application: Number(appId),
+        scores: {
+          attendance: scores[0] || 4,
+          punctuality: scores[1] || 4,
+          tasks: scores[2] || 4,
+          technical: scores[3] || 4,
+          communication: scores[4] || 4,
+          teamwork: scores[4] || 4,
+          responsibility: scores[4] || 4,
+        },
+        notes: String(note||'').trim(),
+      },
+    });
+  }
+ } catch (err) {
+  return { ok: false, message: err?.message || 'تعذر حفظ التقييم على الخادم' };
+ }
  return updateTrainee(id,{evaluation:{scores:[...scores],note:String(note||'').trim(),by:t.supervisor||'غير محدد',date:new Date().toISOString().slice(0,10)}});
 }
 export function completionChecklist(t){return [{ok:Number(t.completedHours)>=Number(t.requiredHours),text:`إكمال الساعات المطلوبة (${t.completedHours} من ${t.requiredHours})`},{ok:!!t.evaluation,text:'اكتمال تقييم المتدرب'},{ok:!(t.logs||[]).some(l=>l.status==='pending'||l.status==='revision'),text:'اعتماد جميع السجلات اليومية'}];}

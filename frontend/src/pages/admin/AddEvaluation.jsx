@@ -56,7 +56,7 @@ export default function AddEvaluation() {
     setError("");
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!evaluation) return;
 
     if (evaluation.status === "approved") {
@@ -103,7 +103,7 @@ export default function AddEvaluation() {
     setSaving(true);
 
     try {
-      saveEvaluation(updated);
+      await saveEvaluation(updated);
 
       navigate(`${detailsPath}/final-review`, {
         replace: true,
@@ -112,8 +112,8 @@ export default function AddEvaluation() {
             "تم حفظ التقييم الأكاديمي بنجاح. يمكنك الآن مراجعة الدرجة النهائية.",
         },
       });
-    } catch {
-      setError("تعذر حفظ التقييم محليًا. حاول مرة أخرى.");
+    } catch (err) {
+      setError(err?.message || "تعذر حفظ التقييم. حاول مرة أخرى.");
       setSaving(false);
     }
   };

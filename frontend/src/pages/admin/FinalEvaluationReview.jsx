@@ -45,7 +45,7 @@ export default function FinalEvaluationReview() {
   const approved = evaluation?.status === "approved";
   const finalScore = calculateFinalScore(evaluation);
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!evaluation || !ready || approved) {
       setError("لا يمكن اعتماد هذا التقييم في حالته الحالية.");
       return;
@@ -60,7 +60,7 @@ export default function FinalEvaluationReview() {
     };
 
     try {
-      saveEvaluation(updated);
+      await saveEvaluation(updated);
       setEvaluation(updated);
       setShowConfirm(false);
       setError("");
@@ -72,8 +72,8 @@ export default function FinalEvaluationReview() {
             "تم اعتماد الدرجة النهائية بنجاح.",
         },
       });
-    } catch {
-      setError("تعذر حفظ الاعتماد. حاول مرة أخرى.");
+    } catch (err) {
+      setError(err?.message || "تعذر حفظ الاعتماد. حاول مرة أخرى.");
       setShowConfirm(false);
     }
   };

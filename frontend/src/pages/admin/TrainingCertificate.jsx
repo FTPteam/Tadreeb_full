@@ -5,7 +5,7 @@ import { ArrowRight, GraduationCap, Printer, AlertCircle } from "lucide-react";
 import Header from "../../components/admin/Header";
 import Sidebar from "../../components/admin/Sidebar";
 import { getTrainingStudent } from "./trainingMonitoringStore";
-import { getCertificate, issueDemoCertificate } from "./certificatesStore";
+import { downloadCertificatePdf, getCertificate, issueDemoCertificate } from "./certificatesStore";
 
 export default function TrainingCertificate() {
   const navigate = useNavigate();
@@ -16,9 +16,9 @@ export default function TrainingCertificate() {
   const eligible = student?.status === "completed" && Boolean(student.completedAt);
   const detailsPath = `/admin/training-monitoring/${encodeURIComponent(studentId || "")}`;
 
-  const issue = () => {
+  const issue = async () => {
     try {
-      const result = issueDemoCertificate(studentId);
+      const result = await issueDemoCertificate(studentId);
       setCertificate(result);
       setError("");
     } catch (err) {
@@ -56,7 +56,7 @@ export default function TrainingCertificate() {
                     <GraduationCap size={18} /> {certificate ? "تم تجهيز المعاينة" : "تجهيز شهادة تجريبية"}
                   </button>
                   {certificate && (
-                    <button type="button" onClick={() => window.print()} className="inline-flex h-[44px] items-center gap-2 rounded-lg border border-[#E0E7F2] bg-white px-5 text-[12px] font-semibold">
+                    <button type="button" onClick={() => certificate?.id ? downloadCertificatePdf(certificate) : window.print()} className="inline-flex h-[44px] items-center gap-2 rounded-lg border border-[#E0E7F2] bg-white px-5 text-[12px] font-semibold">
                       <Printer size={18}/> طباعة / حفظ PDF
                     </button>
                   )}

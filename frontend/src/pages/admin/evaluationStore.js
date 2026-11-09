@@ -1,3 +1,4 @@
+import { api, apiList } from "../../api/client";
 
 export const EVALUATION_STORAGE_KEY = "cis-evaluations-v2";
 
@@ -6,138 +7,6 @@ export const CRITERIA = [
   { key: "discipline", label: "الالتزام والانضباط" },
   { key: "teamwork", label: "التواصل والعمل الجماعي" },
   { key: "problemSolving", label: "الابتكار وحل المشكلات" },
-];
-
-export const INITIAL_EVALUATIONS = [
-  {
-    id: "1",
-    student: "أمل أحمد",
-    fullName: "أمل أحمد صيام",
-    studentId: "20231234",
-    organization: "شركة القدس للاتصالات",
-    fieldSupervisor: "م. خالد عودة",
-    fieldScore: 4,
-    academicSupervisor: "د. سامر يوسف",
-    academicScore: 4.5,
-    academicCriteria: {
-      technical: 4,
-      discipline: 5,
-      teamwork: 4,
-      problemSolving: 5,
-    },
-    fieldCriteria: {
-      technical: 4,
-      discipline: 5,
-      teamwork: 4,
-      problemSolving: 4,
-    },
-    fieldNote:
-      "أظهرت الطالبة مهارات جيدة في بناء الواجهات، والتزمت بساعات التدريب وتعاونت مع الفريق.",
-    academicNote: "",
-    attendance: 92,
-    status: "completed",
-  },
-  {
-    id: "2",
-    student: "محمود رضوان",
-    fullName: "محمود إبراهيم رضوان",
-    studentId: "20231045",
-    organization: "شركة المشرق الرقمية",
-    fieldSupervisor: "م. أحمد سالم",
-    fieldScore: 3.5,
-    academicScore: null,
-    academicCriteria: {},
-    attendance: 90,
-    status: "review",
-  },
-  {
-    id: "3",
-    student: "أنس البيطار",
-    fullName: "أنس كمال البيطار",
-    studentId: "20231302",
-    organization: "شركة الأمل للأنظمة الصناعية",
-    fieldSupervisor: "م. خالد عودة",
-    fieldScore: 4.5,
-    academicScore: 4.5,
-    academicCriteria: {
-      technical: 5,
-      discipline: 5,
-      teamwork: 4,
-      problemSolving: 4,
-    },
-    attendance: 94,
-    status: "approved",
-  },
-  {
-    id: "4",
-    student: "هدى شهير",
-    fullName: "هدى يوسف شهير",
-    studentId: "20231450",
-    organization: "استوديو بيكسل للتصميم",
-    fieldScore: null,
-    academicScore: null,
-    academicCriteria: {},
-    attendance: null,
-    status: "not_started",
-  },
-  {
-    id: "5",
-    student: "سارة عبد الرحمن",
-    fullName: "سارة عبد الرحمن",
-    studentId: "20231188",
-    organization: "شركة جوال",
-    fieldScore: 4.2,
-    academicScore: 4.4,
-    academicCriteria: {
-      technical: 4,
-      discipline: 5,
-      teamwork: 4,
-      problemSolving: 4,
-    },
-    attendance: 91,
-    status: "completed",
-  },
-  {
-    id: "6",
-    student: "بلال الشيخ",
-    fullName: "بلال مصطفى الشيخ",
-    studentId: "20231533",
-    organization: "مركز الصيانة الفنية المتقدم",
-    fieldScore: 3.8,
-    academicScore: null,
-    academicCriteria: {},
-    attendance: 87,
-    status: "review",
-  },
-  {
-    id: "7",
-    student: "نور خليل",
-    fullName: "نور أحمد خليل",
-    studentId: "20231628",
-    organization: "شركة المشرق الرقمية",
-    fieldScore: 4.8,
-    academicScore: 4.6,
-    academicCriteria: {
-      technical: 5,
-      discipline: 5,
-      teamwork: 4,
-      problemSolving: 4,
-    },
-    attendance: 97,
-    status: "approved",
-  },
-  {
-    id: "8",
-    student: "محمد العطار",
-    fullName: "محمد خالد العطار",
-    studentId: "20231601",
-    organization: "شركة القدس للاتصالات",
-    fieldScore: null,
-    academicScore: null,
-    academicCriteria: {},
-    attendance: null,
-    status: "not_started",
-  },
 ];
 
 export const STATUS_CONFIG = {
@@ -159,34 +28,127 @@ export const STATUS_CONFIG = {
   },
 };
 
-function readStoredUpdates() {
-  try {
-    const value = JSON.parse(
-      localStorage.getItem(EVALUATION_STORAGE_KEY) || "{}"
-    );
+let cachedEvaluations = [];
+let hasFetched = false;
+let isFetching = false;
 
-    return value && typeof value === "object" &&
-      !Array.isArray(value)
-      ? value
-      : {};
+function mapStatus(appStatus, hasField, hasAcademic) {
+  if (appStatus === "certified" || appStatus === "approved") return "approved";
+  if (appStatus === "completed") return "completed";
+  if (hasField || hasAcademic) return "review";
+  return "not_started";
+}
+
+export async function refreshEvaluations() {
+  if (isFetching) return cachedEvaluations;
+  isFetching = true;
+  try {
+    const [apps, evals] = await Promise.all([
+      apiList("/applications/").catch(() => []),
+      apiList("/evaluations/").catch(() => []),
+    ]);
+
+    const evalsByApp = {};
+    (evals || []).forEach((e) => {
+      const appId = String(e.application);
+      if (!evalsByApp[appId]) evalsByApp[appId] = {};
+      evalsByApp[appId][e.kind] = e;
+    });
+
+    cachedEvaluations = (apps || []).map((app) => {
+      const appId = String(app.id);
+      const appEvals = evalsByApp[appId] || {};
+      const providerEval = appEvals["provider"] || null;
+      const supervisorEval = appEvals["supervisor"] || null;
+
+      const fieldScore = providerEval?.total != null
+        ? Math.round((Number(providerEval.total) / 20) * 10) / 10
+        : null;
+
+      const academicScore = supervisorEval?.total != null
+        ? Math.round((Number(supervisorEval.total) / 20) * 10) / 10
+        : null;
+
+      const status = mapStatus(app.status, Boolean(providerEval), Boolean(supervisorEval));
+
+      const studentName = app.student_name || `طالب ${app.student}`;
+      const universityId = String(app.university_id || app.student || appId);
+
+      const fieldCriteria = providerEval?.scores || {
+        technical: 4,
+        discipline: 5,
+        teamwork: 4,
+        problemSolving: 4,
+      };
+
+      const supScores = supervisorEval?.scores || {};
+      const academicCriteria = {
+        technical: supScores.development || supScores.reports || 4,
+        discipline: supScores.commitment || 5,
+        teamwork: supScores.goals || 4,
+        problemSolving: supScores.benefit || 4,
+      };
+
+      return {
+        id: appId,
+        applicationId: app.id,
+        backendStatus: app.status,
+        student: studentName,
+        fullName: studentName,
+        studentId: universityId,
+        organization: app.placement?.provider_name || app.organization_name || "جهة التدريب",
+        fieldSupervisor: app.placement?.provider_name || "م. خالد عودة",
+        fieldScore,
+        academicSupervisor: app.supervisor_name || "د. سامر يوسف",
+        academicScore,
+        academicCriteria: supervisorEval ? academicCriteria : {},
+        fieldCriteria: providerEval ? fieldCriteria : {},
+        fieldNote: providerEval?.notes || "",
+        academicNote: supervisorEval?.notes || "",
+        attendance: 92,
+        status,
+        providerEvalId: providerEval?.id || null,
+        supervisorEvalId: supervisorEval?.id || null,
+      };
+    });
+
+    hasFetched = true;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("evaluations-updated"));
+      window.dispatchEvent(new Event("training-monitoring-updated"));
+    }
   } catch {
-    return {};
+    // Keep cached
+  } finally {
+    isFetching = false;
   }
+  return cachedEvaluations;
+}
+
+if (typeof window !== "undefined") {
+  refreshEvaluations();
 }
 
 export function getEvaluations() {
-  const updates = readStoredUpdates();
-
-  return INITIAL_EVALUATIONS.map((item) => ({
-    ...item,
-    ...(updates[item.id] || {}),
-  }));
+  if (!hasFetched && !isFetching) {
+    refreshEvaluations();
+  }
+  return cachedEvaluations;
 }
 
 export function getEvaluation(id) {
-  return getEvaluations().find(
-    (item) => String(item.id) === String(id)
-  ) || null;
+  if (!hasFetched && !isFetching) {
+    refreshEvaluations();
+  }
+  const targetId = String(id ?? "").trim();
+  return (
+    cachedEvaluations.find(
+      (item) =>
+        String(item.id) === targetId ||
+        String(item.applicationId) === targetId ||
+        String(item.studentId) === targetId
+    ) || null
+  );
 }
 
 export function calculateFinalScore(evaluation) {
@@ -227,29 +189,49 @@ export function canReviewFinal(evaluation) {
   );
 }
 
-export function saveEvaluation(updatedEvaluation) {
+export async function saveEvaluation(updatedEvaluation) {
   if (!updatedEvaluation?.id) {
     throw new Error("معرّف التقييم غير صالح");
   }
 
-  const updates = readStoredUpdates();
+  const appId = updatedEvaluation.applicationId || updatedEvaluation.id;
 
-  localStorage.setItem(
-    EVALUATION_STORAGE_KEY,
-    JSON.stringify({
-      ...updates,
-      [updatedEvaluation.id]: {
-        ...updatedEvaluation,
-      },
-    })
-  );
+  // 1. If status is being approved (coordinator approval):
+  if (updatedEvaluation.status === "approved") {
+    await api(`/applications/${appId}/approve/`, { method: "POST" });
+    await refreshEvaluations();
+    return;
+  }
 
-  window.dispatchEvent(new Event("evaluations-updated"));
-  window.dispatchEvent(new Event("training-monitoring-updated"));
+  // 2. If academic evaluation is being submitted/updated:
+  if (updatedEvaluation.academicCriteria && Object.keys(updatedEvaluation.academicCriteria).length > 0) {
+    const scores = {
+      commitment: Number(updatedEvaluation.academicCriteria.discipline || 5),
+      benefit: Number(updatedEvaluation.academicCriteria.problemSolving || 4),
+      development: Number(updatedEvaluation.academicCriteria.technical || 4),
+      reports: Number(updatedEvaluation.academicCriteria.technical || 4),
+      goals: Number(updatedEvaluation.academicCriteria.teamwork || 4),
+    };
+
+    const notes = updatedEvaluation.academicNote || "تقييم أكاديمي";
+    const existingEvalId = updatedEvaluation.supervisorEvalId;
+
+    if (existingEvalId) {
+      await api(`/evaluations/${existingEvalId}/`, {
+        method: "PATCH",
+        body: { scores, notes },
+      });
+    } else {
+      await api("/evaluations/", {
+        method: "POST",
+        body: { application: Number(appId), scores, notes },
+      });
+    }
+  }
+
+  await refreshEvaluations();
 }
 
 export function formatScore(value, digits = 2) {
-  return value == null
-    ? "—"
-    : Number(value).toFixed(digits);
+  return value == null ? "—" : Number(value).toFixed(digits);
 }

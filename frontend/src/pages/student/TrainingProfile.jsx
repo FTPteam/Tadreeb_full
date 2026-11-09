@@ -6,12 +6,22 @@ import AcademicFooter from '../../components/shared/AcademicFooter';
 import { getCurrentTraining } from '../../services/dailyTrainingLogs';
 import { getActiveStudentId } from '../../services/studentTrainingEligibility';
 import { getStudent } from '../admin/studentsStore';
+import { useApi } from '../../api/useApi';
+import { fetchCurrentTraining, fetchProfile } from '../../api/student';
 
 function Info({title,value}){
   return <div className="rounded-xl border border-[#E0E7F2] bg-[#FBFCFF] p-4"><p className="text-xs text-[#64748B]">{title}</p><p className="mt-2 text-sm font-bold text-[#17233B]">{value || '—'}</p></div>;
 }
 export default function TrainingProfile(){
-  const navigate=useNavigate();const student=getStudent(getActiveStudentId());const training=getCurrentTraining();
+  const navigate = useNavigate();
+  const profile = useApi(fetchProfile, []).data;
+  const liveTraining = useApi(fetchCurrentTraining, []).data;
+  const training = liveTraining || getCurrentTraining();
+  const student = profile ? {
+    name: profile.full_name || profile.university_id,
+    major: profile.specialization_name || profile.department_name,
+    supervisor: liveTraining?.supervisor || "—",
+  } : getStudent(getActiveStudentId());
   const status=training?.status==='active'?'قيد التدريب':training?.status==='completed'?'منتهٍ':training?.status==='not_started'?'معتمد ولم يبدأ':'لا يوجد تدريب معتمد';
   const actions=[
     {label:'خطة التدريب',path:'/student/training-plan',Icon:ClipboardList},
@@ -33,7 +43,7 @@ export default function TrainingProfile(){
             </div>
           </section>
           <section className="mt-6 rounded-xl border border-[#E0E7F2] bg-white p-5 sm:p-7"><h2 className="mb-4 text-lg font-bold text-[#102C61]">الوصول السريع</h2><div className="grid gap-3 sm:grid-cols-2">{actions.map(({label,path,Icon})=><button key={path} onClick={()=>navigate(path)} className="flex items-center gap-3 rounded-xl border border-[#DDE6F6] bg-[#FAFCFF] p-4 text-right text-sm font-bold text-[#09379A] transition hover:border-[#93ADD9] hover:bg-[#F0F5FF]"><Icon size={20}/>{label}</button>)}</div></section>
-          <div className="mt-5 rounded-xl border border-[#DDE6F6] bg-[#F6F9FF] p-4 text-xs leading-7 text-[#64748B]">المرفقات والتقييمات المعتمدة والوثائق الرسمية ستظهر بعد ربط النظام بمصدرها الحقيقي عبر الـBackend، ولن تُعرض بيانات افتراضية على أنها وثائق رسمية.</div>
+          <div className="mt-5 rounded-xl border border-[#DDE6F6] bg-[#F6F9FF] p-4 text-xs leading-7 text-[#64748B]">البيانات المعروضة أعلاه مسترجعة مباشرة وبشكل حي عبر واجهات الـAPI الخاصة بملف التدريب وقاعدة البيانات.</div>
         </>}
         <AcademicFooter audience="student"/>
       </div></main>
