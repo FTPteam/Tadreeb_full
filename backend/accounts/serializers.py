@@ -162,9 +162,16 @@ class DepartmentSerializer(serializers.ModelSerializer):
 class StudentProfileSerializer(serializers.ModelSerializer):
     """Read shape shared by the student (/api/students/me/) and staff (/api/students/)."""
 
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
     university_id = serializers.CharField(source="user.username", read_only=True)
     full_name = serializers.CharField(source="user.get_full_name", read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
+    training_status = serializers.SerializerMethodField()
+    backend_training_status = serializers.SerializerMethodField()
+    supervisor = serializers.SerializerMethodField()
+    supervisor_id = serializers.SerializerMethodField()
+    organization = serializers.SerializerMethodField()
+    start_date = serializers.SerializerMethodField()
     department = serializers.PrimaryKeyRelatedField(
         queryset=Department.objects.all(), allow_null=True, required=False
     )
@@ -194,6 +201,13 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "academic_status",
             "cv",
             "eligibility",
+            "user_id",
+            "training_status",
+            "backend_training_status",
+            "supervisor",
+            "supervisor_id",
+            "organization",
+            "start_date",
         ]
 
     @extend_schema_field(
@@ -206,6 +220,66 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             },
         )
     )
+    def _latest_app(self, profile):
+        if not hasattr(profile, "_cached_latest_app"):
+            profile._cached_latest_app = (
+                profile.user.applications.select_related("supervisor")
+                .prefetch_related(
+                    "placements__opportunity__provider",
+                    "preferences__opportunity__provider",
+                )
+                .order_by("-id")
+                .first()
+            )
+        return profile._cached_latest_app
+
+    def get_training_status(self, profile):
+        app = self._latest_app(profile)
+        if not app or app.status == "draft":
+            return "لم يبدأ"
+        if app.status == "in_training":
+            return "قيد التدريب"
+        if app.status in ("submitted", "under_review", "accepted", "assigned", "needs_changes"):
+            return "بانتظار الاعتماد"
+        if app.status in ("completed", "approved", "certified"):
+            return "منتهٍ"
+        if app.status in ("rejected", "withdrawn"):
+            return "مرفوض"
+        return "لم يبدأ"
+
+    def get_backend_training_status(self, profile):
+        app = self._latest_app(profile)
+        return app.status if app else None
+
+    def get_supervisor(self, profile):
+        app = self._latest_app(profile)
+        if app and app.supervisor:
+            return app.supervisor.get_full_name() or app.supervisor.username
+        return "—"
+
+    def get_supervisor_id(self, profile):
+        app = self._latest_app(profile)
+        return app.supervisor_id if app else None
+
+    def get_organization(self, profile):
+        app = self._latest_app(profile)
+        if not app:
+            return "—"
+        placement = app.active_placement
+        if placement and placement.opportunity and placement.opportunity.provider:
+            return placement.opportunity.provider.name
+        if app.preferences.exists():
+            pref = app.preferences.first()
+            if pref.opportunity and pref.opportunity.provider:
+                return pref.opportunity.provider.name
+        return "—"
+
+    def get_start_date(self, profile):
+        app = self._latest_app(profile)
+        if app and app.active_placement:
+            return str(app.active_placement.start_date)
+        return "—"
+
     def get_eligibility(self, profile):
         is_eligible, reasons = check_eligibility(profile)
         return {

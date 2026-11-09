@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 import Sidebar from "../../components/admin/Sidebar";
-import { getStudents, deleteStudent } from "./studentsStore";
+import { fetchStudents, deleteStudent } from "../../api/studentsApi";
 
 // =====================================================
 // DATA
@@ -53,7 +53,9 @@ export default function Students() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [students, setStudents] = useState(getStudents);
+ const [students, setStudents] = useState([]);
+   const [loadingStudents, setLoadingStudents] = useState(true);
+  const [studentsError, setStudentsError] = useState("");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("الكل");
@@ -67,25 +69,38 @@ export default function Students() {
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [deleteError, setDeleteError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-
+  
   useEffect(() => {
-    setStudents(getStudents());
-  }, [location.key]);
+  let cancelled = false;
 
-  useEffect(() => {
-    const refresh = () => setStudents(getStudents());
+  async function loadStudents() {
+    setLoadingStudents(true);
+    setStudentsError("");
 
-    window.addEventListener("storage", refresh);
-    window.addEventListener("admin-students-updated", refresh);
+    try {
+      const data = await fetchStudents();
 
-    return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener("admin-students-updated", refresh);
-    };
-  }, []);
+      if (cancelled) return;
 
-  useEffect(() => {
-    if (!studentToDelete) return;
+      setStudents(data);
+    } catch (error) {
+      if (!cancelled) {
+        setStudentsError(error.message || "تعذر تحميل الطلاب.");
+      }
+    } finally {
+      if (!cancelled) setLoadingStudents(false);
+    }
+  }
+
+        loadStudents();
+
+  return () => {
+    cancelled = true;
+  };
+}, [location.key]);
+
+useEffect(() => {
+  if (!studentToDelete) return;
 
     const onEscape = (event) => {
       if (event.key === "Escape") {
@@ -203,29 +218,33 @@ export default function Students() {
     setShowSort(false);
   };
 
-  const confirmDelete = () => {
-    if (!studentToDelete) return;
+const confirmDelete = async () => {
+  if (!studentToDelete) return;
 
-    try {
-      deleteStudent(studentToDelete.id);
-    } catch {
-      setDeleteError("تعذر حفظ عملية الحذف. حاول مجددًا.");
-      return;
-    }
+  setDeleteError("");
 
+  try {
+    // الحذف الآمن للطالب عبر Django
+    await deleteStudent(studentToDelete.userId, studentToDelete.profileId);
+
+    // تحديث الجدول فوراً بعد نجاح الحذف
     setStudents((previous) =>
-      previous.filter(
-        (student) => student.id !== studentToDelete.id
-      )
+      previous.filter((student) => student.id !== studentToDelete.id)
     );
 
-    setSuccessMessage(
-      `تم حذف الطالب ${studentToDelete.name} بنجاح.`
-    );
-
+    setSuccessMessage(`تم حذف الطالب ${studentToDelete.name} بنجاح.`);
     setStudentToDelete(null);
     setDeleteError("");
-  };
+  } catch (error) {
+    const message =
+      error?.data?.detail ||
+      error?.message ||
+      "تعذر حذف الطالب. حاولي مرة أخرى.";
+
+    setDeleteError(message);
+  }
+};
+
 
   const exportCSV = () => {
     const rows = [

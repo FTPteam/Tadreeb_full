@@ -9,11 +9,12 @@ from django.db.models import Count, Q
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import mixins, serializers, viewsets
+from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action, api_view, parser_classes, permission_classes
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -173,13 +174,27 @@ class StudentViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
-    """/api/students/: list, search and edit students (supervisor, coordinator, admin)."""
+    """/api/students/: list, search, edit and delete students (supervisor, coordinator, admin)."""
 
     serializer_class = StudentProfileSerializer
     permission_classes = [IsStaffRole]
-    http_method_names = ["get", "patch", "head", "options"]
+    http_method_names = ["get", "patch", "delete", "head", "options"]
+
+    def get_permissions(self):
+        if self.action == "destroy":
+            return [IsCoordinator()]
+        return [IsStaffRole()]
+
+    def perform_destroy(self, profile):
+        user = profile.user
+        if user.applications.exists():
+            raise ValidationError({
+                "detail": "لا يمكن حذف هذا الطالب لأنه يمتلك طلبات تدريب محفوظة."
+            })
+        user.delete()
 
     def get_queryset(self):
         queryset = StudentProfile.objects.select_related(
@@ -206,6 +221,7 @@ class UserViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
     """/api/users/: accounts (FR-03), and the supervisors to choose from (FR-18).
@@ -218,7 +234,20 @@ class UserViewSet(
 
     serializer_class = UserSerializer
     permission_classes = [IsCoordinator]
-    http_method_names = ["get", "post", "patch", "head", "options"]
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def perform_destroy(self, instance):
+        if instance.role != User.Role.STUDENT:
+            raise ValidationError({
+                "detail": "الحذف مسموح لحسابات الطلاب فقط."
+            })
+
+        if instance.applications.exists():
+            raise ValidationError({
+                "detail": "لا يمكن حذف هذا الطالب لأنه يمتلك طلبات تدريب محفوظة."
+            })
+
+        instance.delete()
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):

@@ -164,9 +164,33 @@ class UserApiTests(APITestCase):
         response = self.client.patch(f"{URL}{self.student.id}/", {"password": PASSWORD}, format="json")
         self.assertEqual(response.status_code, 400)
 
-    def test_accounts_cannot_be_deleted(self):
+    def test_non_students_cannot_be_deleted(self):
         self.client.force_authenticate(self.admin)
-        self.assertEqual(self.client.delete(f"{URL}{self.student.id}/").status_code, 405)
+        res = self.client.delete(f"{URL}{self.supervisor.id}/")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("الحذف مسموح لحسابات الطلاب فقط", str(res.data))
+
+    def test_student_with_applications_cannot_be_deleted(self):
+        Application.objects.get_or_create(student=self.student)
+        self.client.force_authenticate(self.coordinator)
+        res = self.client.delete(f"{URL}{self.student.id}/")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("لا يمكن حذف هذا الطالب لأنه يمتلك طلبات تدريب محفوظة", str(res.data))
+
+    def test_student_without_applications_can_be_deleted(self):
+        fresh_student = self.user("student_to_delete_01", User.Role.STUDENT)
+        self.client.force_authenticate(self.coordinator)
+        res = self.client.delete(f"{URL}{fresh_student.id}/")
+        self.assertEqual(res.status_code, 204)
+        self.assertFalse(User.objects.filter(id=fresh_student.id).exists())
+
+    def test_student_profile_delete_endpoint(self):
+        fresh_student = self.user("student_to_delete_02", User.Role.STUDENT)
+        profile, _ = StudentProfile.objects.get_or_create(user=fresh_student)
+        self.client.force_authenticate(self.coordinator)
+        res = self.client.delete(f"/api/students/{profile.id}/")
+        self.assertEqual(res.status_code, 204)
+        self.assertFalse(User.objects.filter(id=fresh_student.id).exists())
 
     # --- resetting a password ---
 

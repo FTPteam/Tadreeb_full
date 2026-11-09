@@ -1,5 +1,5 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
-import { getOrganizations, ORGANIZATIONS_EVENT } from "./trainingOrganizationsStore";
+import { getOrganizations, refreshOrganizations, ORGANIZATIONS_EVENT } from "./trainingOrganizationsStore";
 import AdminHeader from "../../components/admin/Header";
 
 import { useEffect, useMemo, useState } from "react";
@@ -59,6 +59,7 @@ export default function TrainingOrganizations() {
   const successMessage = location.state?.successMessage;
 
   useEffect(() => {
+    if (typeof refreshOrganizations === 'function') refreshOrganizations();
     setOrganizations(readOrganizations());
   }, [location.key]);
 

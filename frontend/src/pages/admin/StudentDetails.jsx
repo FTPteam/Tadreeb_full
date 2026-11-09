@@ -22,219 +22,12 @@ import {
 } from "lucide-react";
 
 import Sidebar from "../../components/admin/Sidebar";
-import { getStudent } from "./studentsStore";
+import { fetchStudent } from "../../api/studentsApi";
+import { apiList } from "../../api/client";
 
 // =====================================================
-// STUDENTS DATA
+// SAMPLE RECORDS (FALLBACK WHEN EMPTY)
 // =====================================================
-
-const STUDENTS = {
-  "20231234": {
-    id: "20231234",
-    name: "أمل أحمد صيام أبو زيد",
-    major: "البرمجيات وقواعد البيانات",
-    level: "الدبلوم المتوسط",
-    organization: "شركة القدس للاتصالات",
-    supervisor: "م. خالد عودة",
-    phone: "0599000111",
-    startDate: "2025/12/01",
-    endDate: "2026/02/01",
-    status: "قيد التدريب",
-    completedHours: 72,
-    totalHours: 120,
-    attendance: 92,
-    rating: 4.0,
-    notes: "الطالبة ملتزمة بالحضور وتتعلم الأدوات الجديدة بسرعة.",
-  },
-  "20231045": {
-    id: "20231045",
-    name: "محمود إبراهيم رضوان",
-    major: "تكنولوجيا علم البيانات",
-    level: "الدبلوم المتوسط",
-    organization: "شركة المشرق الرقمية",
-    supervisor: "م. خالد عودة",
-    phone: "0599000111",
-    startDate: "2025/12/01",
-    endDate: "2026/02/01",
-    status: "قيد التدريب",
-    completedHours: 84,
-    totalHours: 120,
-    attendance: 95,
-    rating: 4.5,
-    notes: "الطالب ملتزم ويحقق تقدمًا جيدًا في المهام المطلوبة.",
-  },
-  "20231188": {
-    id: "20231188",
-    name: "سارة عبد الرحمن",
-    major: "الاتصالات وإنترنت الأشياء",
-    level: "الدبلوم المتوسط",
-    organization: "شركة جوال",
-    supervisor: "م. خالد عودة",
-    phone: "0599000111",
-    startDate: "—",
-    endDate: "—",
-    status: "بانتظار الاعتماد",
-    completedHours: 0,
-    totalHours: 120,
-    attendance: 0,
-    rating: 0,
-    notes: "الطلب قيد الاعتماد.",
-  },
-  "20231302": {
-    id: "20231302",
-    name: "أنس كمال البيطار",
-    major: "إلكترونيات صناعية وتحكم",
-    level: "الدبلوم المتوسط",
-    organization: "شركة الأمل للأنظمة الصناعية",
-    supervisor: "م. خالد عودة",
-    phone: "0599000111",
-    startDate: "2025/09/15",
-    endDate: "2025/11/15",
-    status: "منتهٍ",
-    completedHours: 120,
-    totalHours: 120,
-    attendance: 97,
-    rating: 4.8,
-    notes: "أكمل الطالب التدريب بنجاح.",
-  },
-  "20231450": {
-    id: "20231450",
-    name: "هدى يوسف شهر",
-    major: "التصميم الجرافيكي والفنون الرقمية",
-    level: "الدبلوم المتوسط",
-    organization: "استوديو بيكسل للتصميم",
-    supervisor: "م. خالد عودة",
-    phone: "0599000111",
-    startDate: "2026/01/10",
-    endDate: "2026/03/10",
-    status: "لم يبدأ",
-    completedHours: 0,
-    totalHours: 120,
-    attendance: 0,
-    rating: 0,
-    notes: "لم يبدأ التدريب بعد.",
-  },
-  "20231533": {
-    id: "20231533",
-    name: "بلال مصطفى الشيخ",
-    major: "صيانة الحاسب الآلي",
-    level: "الدبلوم المتوسط",
-    organization: "—",
-    supervisor: "م. خالد عودة",
-    phone: "—",
-    startDate: "—",
-    endDate: "—",
-    status: "مرفوض",
-    completedHours: 0,
-    totalHours: 120,
-    attendance: 0,
-    rating: 0,
-    notes: "لم يتم اعتماد طلب التدريب.",
-  },
-  "20231601": {
-    id: "20231601",
-    name: "محمد خالد العطار",
-    major: "البرمجيات وقواعد البيانات",
-    level: "الدبلوم المتوسط",
-    organization: "شركة التقنية الحديثة",
-    supervisor: "م. خالد عودة",
-    phone: "0599000111",
-    startDate: "2026/01/15",
-    endDate: "2026/03/15",
-    status: "قيد التدريب",
-    completedHours: 60,
-    totalHours: 120,
-    attendance: 90,
-    rating: 4.2,
-    notes: "الطالب يحقق تقدمًا مستمرًا.",
-  },
-  "20231628": {
-    id: "20231628",
-    name: "نور أحمد خليل",
-    major: "تكنولوجيا علم البيانات",
-    level: "الدبلوم المتوسط",
-    organization: "شركة المشرق الرقمية",
-    supervisor: "م. خالد عودة",
-    phone: "—",
-    startDate: "—",
-    endDate: "—",
-    status: "لم يبدأ",
-    completedHours: 0,
-    totalHours: 120,
-    attendance: 0,
-    rating: 0,
-    notes: "بانتظار بدء التدريب.",
-  },
-  "20231712": {
-    id: "20231712",
-    name: "ياسمين محمود",
-    major: "التصميم الجرافيكي والفنون الرقمية",
-    level: "الدبلوم المتوسط",
-    organization: "استوديو بيكسل للتصميم",
-    supervisor: "م. خالد عودة",
-    phone: "0599000111",
-    startDate: "2025/08/20",
-    endDate: "2025/10/20",
-    status: "منتهٍ",
-    completedHours: 120,
-    totalHours: 120,
-    attendance: 98,
-    rating: 4.7,
-    notes: "أتمت الطالبة متطلبات التدريب بنجاح.",
-  },
-  "20231744": {
-    id: "20231744",
-    name: "أحمد سامي ناصر",
-    major: "إلكترونيات صناعية وتحكم",
-    level: "الدبلوم المتوسط",
-    organization: "—",
-    supervisor: "م. خالد عودة",
-    phone: "—",
-    startDate: "—",
-    endDate: "—",
-    status: "بانتظار الاعتماد",
-    completedHours: 0,
-    totalHours: 120,
-    attendance: 0,
-    rating: 0,
-    notes: "بانتظار اعتماد جهة التدريب.",
-  },
-  "20231805": {
-    id: "20231805",
-    name: "رنا محمد علي",
-    major: "الاتصالات وإنترنت الأشياء",
-    level: "الدبلوم المتوسط",
-    organization: "شركة جوال",
-    supervisor: "م. خالد عودة",
-    phone: "0599000111",
-    startDate: "2026/01/05",
-    endDate: "2026/03/05",
-    status: "قيد التدريب",
-    completedHours: 75,
-    totalHours: 120,
-    attendance: 94,
-    rating: 4.3,
-    notes: "الطالبة ملتزمة بمتطلبات التدريب.",
-  },
-  "20231840": {
-    id: "20231840",
-    name: "خالد عادل حسن",
-    major: "صيانة الحاسب الآلي",
-    level: "الدبلوم المتوسط",
-    organization: "شركة التقنية الحديثة",
-    supervisor: "م. خالد عودة",
-    phone: "—",
-    startDate: "—",
-    endDate: "—",
-    status: "مرفوض",
-    completedHours: 0,
-    totalHours: 120,
-    attendance: 0,
-    rating: 0,
-    notes: "لم يتم قبول طلب التدريب.",
-  },
-};
-
 // =====================================================
 // SAMPLE RECORDS
 // =====================================================
@@ -320,18 +113,45 @@ export default function StudentDetails() {
 
   const passedStudent = location.state?.student;
 
-  const student = useMemo(() => {
-    const sharedStudent = getStudent(id);
-    if (!sharedStudent) return null;
+  const [student, setStudent] = useState(passedStudent || null);
+  const [loading, setLoading] = useState(!passedStudent);
+  const [studentLogs, setStudentLogs] = useState([]);
+  const [studentReports, setStudentReports] = useState([]);
 
-    return {
-      ...(STUDENTS[id] || {}),
-      ...(passedStudent && String(passedStudent.id) === String(id)
-        ? passedStudent
-        : {}),
-      ...sharedStudent,
-    };
-  }, [id, passedStudent]);
+  useEffect(() => {
+    let cancelled = false;
+    if (id) {
+      fetchStudent(id).then(async (data) => {
+        if (cancelled || !data) return;
+        setStudent(prev => ({ ...(prev || {}), ...data }));
+        setLoading(false);
+
+        // Load real logs and reports if available
+        try {
+          const apps = await apiList("/applications/");
+          const userApp = apps.find(a => a.student_university_id === data.universityId || a.student === data.userId);
+          if (userApp) {
+            setStudent(prev => ({
+              ...prev,
+              applicationId: userApp.id,
+              completedHours: userApp.placement ? userApp.placement.completed_hours || prev.completedHours || 0 : prev.completedHours || 0,
+            }));
+            const [logs, reps] = await Promise.all([
+              apiList(`/daily-logs/?application=${userApp.id}`).catch(() => []),
+              apiList(`/reports/?application=${userApp.id}`).catch(() => []),
+            ]);
+            if (!cancelled) {
+              if (logs.length > 0) setStudentLogs(logs);
+              if (reps.length > 0) setStudentReports(reps);
+            }
+          }
+        } catch {}
+      }).catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+    }
+    return () => { cancelled = true; };
+  }, [id]);
 
   const [activeTab, setActiveTab] = useState("reports");
   const [showMessage, setShowMessage] = useState(false);

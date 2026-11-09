@@ -1,12 +1,10 @@
 import AcademicFooter from "../../components/shared/AcademicFooter";
 import AdminHeader from "../../components/admin/Header";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
   ArrowRight,
-  Bell,
-  Menu,
   Mail,
   Phone,
   Save,
@@ -14,7 +12,7 @@ import {
 } from "lucide-react";
 
 import Sidebar from "../../components/admin/Sidebar";
-import { getStudent, saveStudent } from "./studentsStore";
+import { createStudent, fetchDepartments, fetchSupervisors } from "../../api/studentsApi";
 import { ACADEMIC_PROGRAMS, ACADEMIC_DEPARTMENT } from "../../constants/academicPrograms";
 
 export default function AddStudent() {
@@ -24,53 +22,90 @@ export default function AddStudent() {
     name: "",
     studentId: "",
     major: "",
-    level: "",
+    departmentId: null,
+    specializationId: null,
+    level: "الدبلوم المتوسط",
     email: "",
     phone: "",
-    supervisor: "د. سامر يوسف",
+    supervisor: "",
+    supervisorId: null,
     organization: "",
     notes: "",
   });
 
+  const [departments, setDepartments] = useState([]);
+  const [supervisors, setSupervisors] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchDepartments().then(setDepartments).catch(() => {});
+    fetchSupervisors().then(setSupervisors).catch(() => {});
+  }, []);
+
   const update = (name, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === "major") {
+        // Find matching specialization from real departments
+        for (const d of departments) {
+          const spec = d.specializations?.find(
+            (s) => s.name === value || value.includes(s.name) || s.name.includes(value)
+          );
+          if (spec) {
+            next.specializationId = spec.id;
+            next.departmentId = d.id;
+            break;
+          }
+        }
+      }
+      return next;
+    });
+    if (error) setError("");
   };
 
-  const toggleSidebar = () => {
-    window.dispatchEvent(new Event("toggle-student-sidebar"));
-  };
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
     const id = form.studentId.trim();
-    if (!id || !form.name.trim() || !form.major.trim()) {
-      window.alert("يرجى إدخال الاسم والرقم الجامعي والتخصص.");
+    const name = form.name.trim();
+    const email = form.email.trim();
+
+    if (!id || !name) {
+      setError("يرجى إدخال الاسم والرقم الجامعي.");
       return;
     }
-    if (getStudent(id)) {
-      window.alert("يوجد طالب مسجل بنفس الرقم الجامعي.");
+
+    if (!email) {
+      setError("يرجى إدخال البريد الإلكتروني لتفعيل حساب الطالب.");
       return;
     }
+
+    const nameParts = name.split(/\s+/);
+    const firstName = nameParts.shift() || "";
+    const lastName = nameParts.join(" ") || " ";
+
     try {
-      saveStudent({
-        id,
-        name: form.name.trim(),
-        major: form.major,
-        level: form.level || "الدبلوم المتوسط",
-        email: form.email.trim(),
+      setSubmitting(true);
+      setError("");
+
+      await createStudent({
+        username: id,
+        firstName,
+        lastName,
+        email,
         phone: form.phone.trim(),
-        supervisor: form.supervisor,
-        organization: form.organization,
-        notes: form.notes.trim(),
-        status: "لم يبدأ",
-        startDate: "—",
+        department: form.departmentId || (departments[0]?.id ?? null),
+        specialization: form.specializationId || (departments[0]?.specializations?.[0]?.id ?? null),
       });
-      navigate("/admin/students");
-    } catch {
-      window.alert("تعذر حفظ الطالب. تأكد من مساحة التخزين وحاول مجددًا.");
+
+      navigate("/admin/students", {
+        state: { successMessage: `تم إنشاء حساب الطالب ${name} بنجاح.` },
+      });
+    } catch (err) {
+      setError(err?.data?.detail || err?.message || "تعذر إضافة الطالب. يرجى المحاولة مرة أخرى.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -105,7 +140,7 @@ export default function AddStudent() {
                 </h1>
 
                 <p className="m-0 mt-1 text-[13px] text-[#64748B]">
-                  إدخال بيانات الطالب وتخصصه
+                  إدخال بيانات الطالب وتخصصه الأكاديمي في النظام
                 </p>
               </div>
 
@@ -118,6 +153,12 @@ export default function AddStudent() {
               </button>
             </section>
 
+            {error && (
+              <div className="mb-5 rounded-[8px] border border-[#FECACA] bg-[#FEF2F2] p-4 text-[13px] font-medium text-[#DC2626]">
+                {error}
+              </div>
+            )}
+
             <form
               onSubmit={handleSubmit}
               className="rounded-[12px] border border-[#E0E7F2] bg-white p-6"
@@ -127,21 +168,23 @@ export default function AddStudent() {
               </h2>
 
               <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
-                <Field label="الاسم الكامل">
+                <Field label="الاسم الكامل *">
                   <input
                     value={form.name}
                     onChange={(e) => update("name", e.target.value)}
                     placeholder="اكتب اسم الطالب..."
                     className={inputClass}
+                    required
                   />
                 </Field>
 
-                <Field label="الرقم الجامعي">
+                <Field label="الرقم الجامعي *">
                   <input
                     value={form.studentId}
                     onChange={(e) => update("studentId", e.target.value)}
-                    placeholder="مثال: 20231234"
+                    placeholder="مثال: 120260099"
                     className={inputClass}
+                    required
                   />
                 </Field>
 
@@ -152,9 +195,17 @@ export default function AddStudent() {
                     className={inputClass}
                   >
                     <option value="">اختر التخصص</option>
-                    {ACADEMIC_PROGRAMS.map((major) => (
-                      <option key={major} value={major}>{major}</option>
-                    ))}
+                    {departments.flatMap((d) => d.specializations || []).length > 0
+                      ? departments.flatMap((d) => d.specializations || []).map((s) => (
+                          <option key={s.id} value={s.name}>
+                            {s.name} ({departments.find((d) => d.id === s.department)?.name || ""})
+                          </option>
+                        ))
+                      : ACADEMIC_PROGRAMS.map((major) => (
+                          <option key={major} value={major}>
+                            {major}
+                          </option>
+                        ))}
                   </select>
                 </Field>
 
@@ -164,32 +215,33 @@ export default function AddStudent() {
                     onChange={(e) => update("level", e.target.value)}
                     className={inputClass}
                   >
-                    <option value="">اختر المستوى</option>
                     <option>الدبلوم المتوسط</option>
                     <option>المستوى الأول</option>
                     <option>المستوى الثاني</option>
                   </select>
                 </Field>
 
-                <Field label="البريد الإلكتروني">
+                <Field label="البريد الإلكتروني *">
                   <div className="relative">
-                    <Mail className="absolute right-3 top-1/2 -translate-y-1/2" size={17} />
+                    <Mail className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={17} />
                     <input
+                      type="email"
                       value={form.email}
                       onChange={(e) => update("email", e.target.value)}
-                      placeholder="name@alazhar.edu.ps"
+                      placeholder="student@alazhar.edu.ps"
                       className={`${inputClass} pr-10`}
+                      required
                     />
                   </div>
                 </Field>
 
                 <Field label="رقم الهاتف">
                   <div className="relative">
-                    <Phone className="absolute right-3 top-1/2 -translate-y-1/2" size={17} />
+                    <Phone className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={17} />
                     <input
                       value={form.phone}
                       onChange={(e) => update("phone", e.target.value)}
-                      placeholder="05XXXXXXXX"
+                      placeholder="059XXXXXXX"
                       className={`${inputClass} pr-10`}
                     />
                   </div>
@@ -197,24 +249,21 @@ export default function AddStudent() {
 
                 <Field label="المشرف الأكاديمي">
                   <select
-                    value={form.supervisor}
-                    onChange={(e) => update("supervisor", e.target.value)}
+                    value={form.supervisorId || ""}
+                    onChange={(e) => {
+                      const val = e.target.value ? Number(e.target.value) : null;
+                      const sup = supervisors.find((s) => s.id === val);
+                      update("supervisorId", val);
+                      update("supervisor", sup?.full_name || sup?.username || "");
+                    }}
                     className={inputClass}
                   >
-                    <option>د. سامر يوسف</option>
-                  </select>
-                </Field>
-
-                <Field label="جهة التدريب">
-                  <select
-                    value={form.organization}
-                    onChange={(e) => update("organization", e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">اختر جهة التدريب</option>
-                    <option>شركة القدس للاتصالات</option>
-                    <option>شركة جوال</option>
-                    <option>استوديو بيكسل</option>
+                    <option value="">(اختياري) اختر المشرف الأكاديمي</option>
+                    {supervisors.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.full_name || s.username} ({s.students_count || 0} طلاب)
+                      </option>
+                    ))}
                   </select>
                 </Field>
               </div>
@@ -230,7 +279,7 @@ export default function AddStudent() {
               </Field>
 
               <div className="mt-5 rounded-[7px] bg-[#F1F5F9] px-4 py-3 text-[11px] text-[#64748B]">
-                التخصصات المتاحة ضمن {ACADEMIC_DEPARTMENT} فقط.
+                التخصصات المتاحة متوافقة مع قاعدة بيانات كلية الدراسات المتوسطة - جامعة الأزهر.
               </div>
 
               <div className="mt-5 flex items-center justify-between">
@@ -244,10 +293,11 @@ export default function AddStudent() {
 
                 <button
                   type="submit"
-                  className="flex h-[42px] items-center gap-2 rounded-[8px] bg-[#09379A] px-5 text-[11px] font-bold text-white"
+                  disabled={submitting}
+                  className="flex h-[42px] items-center gap-2 rounded-[8px] bg-[#09379A] px-5 text-[11px] font-bold text-white transition hover:bg-[#072d7d] disabled:opacity-50"
                 >
                   <Save size={15} />
-                  إضافة الطالب
+                  {submitting ? "جاري الحفظ..." : "إضافة الطالب"}
                 </button>
               </div>
             </form>
@@ -266,13 +316,10 @@ const inputClass =
 function Field({ label, children, className = "" }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-2 block text-[11px] font-semibold">
+      <span className="mb-2 block text-[11px] font-semibold text-[#111C2D]">
         {label}
       </span>
       {children}
     </label>
   );
 }
-
-
-
