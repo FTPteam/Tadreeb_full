@@ -19,8 +19,8 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [showSSO, setShowSSO] = useState(false);
-  const [ssoNotice, setSsoNotice] = useState(false);
+
+
   const [errors, setErrors] = useState({});
 
   // TODO (Backend): إعادة تفعيل حالة خطأ تسجيل الدخول.
@@ -55,18 +55,13 @@ export default function Login() {
 
     const newErrors = {};
 
-    if (!formData.email.trim()) {
-      newErrors.email = "هذا الحقل مطلوب";
-    } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
-    ) {
-      newErrors.email = "يرجى إدخال بريد إلكتروني صحيح";
-    }
+if (!formData.email.trim()) {
+  newErrors.email = "يرجى إدخال اسم المستخدم أو البريد الإلكتروني";
+}
 
-    if (!formData.password.trim()) {
-      newErrors.password = "هذا الحقل مطلوب";
-    }
-
+if (!formData.password.trim()) {
+  newErrors.password = "هذا الحقل مطلوب";
+}
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) return;
@@ -102,15 +97,15 @@ export default function Login() {
 
         {/* EMAIL */}
         <div className="mt-6">
-          <FieldLabel>البريد الإلكتروني للجهة</FieldLabel>
+        <FieldLabel>اسم المستخدم أو البريد الإلكتروني للجهة</FieldLabel>
 
           <div className="relative mt-[9px]">
             <input
               name="email"
-              type="email"
+              type="text"
               value={formData.email}
               onChange={handleChange}
-              placeholder="name@company.ps"
+              placeholder="أدخل اسم المستخدم أو البريد الإلكتروني"
               autoComplete="username"
               className={inputClass(!!errors.email, "left")}
             />
@@ -211,19 +206,6 @@ export default function Login() {
           <ArrowLeft size={17} />
           {submitting ? "جارٍ تسجيل الدخول..." : "تسجيل الدخول"}
         </button>
-
-        {/* SSO */}
-        <button
-          type="button"
-          onClick={() => {
-            setShowSSO(true);
-            setSsoNotice(false);
-          }}
-          className="mt-3 flex h-[46px] w-full items-center justify-center gap-2 rounded-[8px] border border-[#E0E7F2] bg-white text-[13px] font-semibold text-[#09379A] transition hover:bg-[#F8FAFC]"
-        >
-          <Building2 size={18} />
-          الدخول عبر بريد الجهة
-        </button>
         <p className="mt-5 text-center text-[12px] text-[#64748B]">
           جهة جديدة؟{" "}
           <button type="button" onClick={() => navigate("/training-provider/register")} className="font-bold text-[#09379A] hover:underline">
@@ -231,58 +213,6 @@ export default function Login() {
           </button>
         </p>
       </form>
-
-      {/* SSO MODAL */}
-      {showSSO && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-5"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowSSO(false);
-            }
-          }}
-        >
-          <div className="w-full max-w-[520px] rounded-[14px] bg-white p-7 shadow-xl sm:p-9">
-            <div className="mb-5 flex h-[58px] w-[58px] items-center justify-center rounded-full bg-[#E6EBF5] text-[#09379A]">
-              <Building2 size={27} />
-            </div>
-
-            <h2 className="text-[21px] font-bold text-[#111C2D]">
-              الدخول عبر بريد الجهة
-            </h2>
-
-            <p className="mt-3 text-[14px] leading-7 text-[#64748B]">
-              سيتم تحويلك إلى صفحة المصادقة الخاصة بمؤسستك، ثم
-              العودة إلى البوابة. (محاكاة)
-            </p>
-
-            {ssoNotice && (
-              <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm leading-6 text-amber-700">
-                المصادقة الموحدة غير مربوطة بعد. يلزم إعداد خدمة
-                SSO مع الجهة.
-              </p>
-            )}
-
-            <div className="mt-7 flex flex-row-reverse gap-3">
-              <button
-                type="button"
-                onClick={() => setShowSSO(false)}
-                className="h-[44px] flex-1 rounded-lg border border-[#E0E7F2]"
-              >
-                إلغاء
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSsoNotice(true)}
-                className="flex h-[44px] flex-1 items-center justify-center gap-2 rounded-lg bg-[#09379A] text-white"
-              >
-                متابعة <ArrowLeft size={17} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AuthLayout>
   );
 }
